@@ -1,14 +1,15 @@
 # Local development stack.
 #
-#   doppler run -- docker compose up -d   -> http://localhost:8080
+#   docker compose up -d                  -> http://localhost:8080
 #   ./tools/test.sh                       -> runs the suite inside the php container
 #
 # No `version:` key: it is obsolete under Compose v2+ and only produces a warning.
 #
-# Secrets come from Doppler, injected via `doppler run -- docker compose ...`
-# for the ${...} interpolation below, and passed into PHP-FPM. Every value has a
-# local default after `:-` so a fresh clone comes up before Doppler is wired —
-# and the DB defaults are exactly what .env.testing assumes.
+# Every value below has a local default after `:-`, and none is secret, so a
+# fresh clone comes up with no setup -- and the DB defaults are exactly what
+# .env.testing assumes. In production, deploy.sh runs Compose under
+# `doppler run --` with the server's prod-serve config, which supplies the
+# real values for the ${...} interpolation.
 #
 # THE ENVIRONMENT BLOCK OF THE php SERVICE IS THE AUTHORITATIVE LIST OF CONFIG
 # KEYS. Adding a config value means adding it there *and* to the Doppler
@@ -44,8 +45,8 @@ services:
     working_dir: /var/www
     # Secrets are INJECTED, not written to disk.
     #
-    # There is no .env file anywhere in this design. Compose is invoked under
-    # `doppler run --`, which puts the secrets in Compose's own environment;
+    # There is no .env file anywhere in this design. In production Compose is
+    # invoked under `doppler run --`, which puts the secrets in Compose's own environment;
     # each value below is interpolated from there into the container. Nothing
     # sensitive is ever at rest on the server, and a failed deploy cannot leave
     # a stale half-written secrets file behind.

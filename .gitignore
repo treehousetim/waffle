@@ -4,7 +4,7 @@
 # Node dependencies — installed by `npm ci` in src/frontend.
 node_modules/
 
-# Secrets. There is no .env: secrets are injected by `doppler run --`. The
+# Secrets. There is no .env: production secrets are injected by `doppler run --`. The
 # ignore stays so a stray one can never be committed. The glob covers
 # .env.local / .env.prod / .env.production too — under the "no env files
 # anywhere" rule every one of them is a mistake. `.env.testing` is the one

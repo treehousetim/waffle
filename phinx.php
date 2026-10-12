@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Phinx configuration.
  *
  * Environments:
- *   development  reads the injected environment (doppler run -- ...)
+ *   development  reads the container environment (docker-compose.yml's defaults)
  *   testing      reads .env.testing ONLY, and refuses anything but a *_test database
  *   production   reads the injected environment (doppler run -- ...)
  *

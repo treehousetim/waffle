@@ -18,8 +18,9 @@ use Psr\Container\ContainerInterface;
 use Slim\App;
 
 return static function (array $overrides = []): App {
-    // No .env, anywhere. Secrets are injected into the container's environment
-    // by `doppler run -- docker compose ...`; container.php reads them from
+    // No .env, anywhere. In production secrets are injected into the container's
+    // environment by `doppler run -- docker compose ...` (locally the compose
+    // defaults are enough); container.php reads them from
     // $_ENV / getenv(). Nothing is loaded from disk, so nothing sensitive is at
     // rest and there is no stale-file failure mode.
     //

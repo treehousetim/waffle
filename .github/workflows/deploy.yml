@@ -120,7 +120,7 @@ jobs:
       # environment rather than the repository, and it is scoped to Doppler's
       # `prod-deploy` config — which holds nothing but the four deploy
       # credentials below. The production application secrets live in the
-      # separate `prd` config and are pulled by the server itself with its own
+      # separate `prod-serve` config and are pulled by the server itself with its own
       # token, so they never touch this runner.
       #
       # Loaded only now, after npm and composer: both run code from the

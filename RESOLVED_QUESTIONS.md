@@ -8,8 +8,11 @@ Each starts with where it was settled. Newest moves at the top.
 ## Where do secrets live?
 
 **Resolved by the template:** Doppler, and only Doppler — local and production —
-with three configs (`dev`, `prd`, `prod-deploy`) that inherit nothing from each
-other. There is no `.env` file anywhere. Tests read the committed
+with two configs, named for who reads them, that inherit nothing from each
+other: `prod-serve` (the server) and `prod-deploy` (GitHub Actions). Until
+2026-10-12 there were three (`dev`, `prd`, `prod-deploy`); `dev` held nothing
+the compose defaults did not, so it went, along with `doppler.yaml`, and `prd`
+was renamed. A `dev` comes back when a feature first needs a local key. There is no `.env` file anywhere. Tests read the committed
 `.env.testing`, which holds no secrets. AGENTS.md §8.
 
 ## How is the app deployed?

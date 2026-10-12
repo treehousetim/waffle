@@ -61,7 +61,7 @@ When it is done, replace the placeholder paragraph in AGENTS.md §1 with what yo
 | --- | --- | --- |
 | [GitHub](https://github.com) | The repository, and GitHub Actions, which builds and deploys every release through a `prod` environment. | Free for public and private repos within the Actions allowance. |
 | [DigitalOcean](https://www.digitalocean.com) | The one droplet production runs on (Ubuntu LTS; 2 GB RAM is plenty to start). | From a few dollars a month. |
-| [Doppler](https://www.doppler.com) | The only source of secrets, locally and in production (`dev`, `prd`, `prod-deploy`). | Free tier covers it. |
+| [Doppler](https://www.doppler.com) | The only source of production secrets: `prod-serve`, read by the server, and `prod-deploy`, read by GitHub Actions. Not needed locally. | Free Developer plan (3 users at last check; see [doppler.com/pricing](https://www.doppler.com/pricing)). |
 | A domain registrar | The production hostname. Any registrar works; its DNS can be hosted by the registrar or by DigitalOcean for free. | A domain a year. |
 
 Needed, but nothing to sign up for:
@@ -80,29 +80,25 @@ Optional:
 
 - Docker (with Docker Compose v2.24 or later)
 - Node 26 LTS (for `npm run build` and `npm run dev` on the host; the test runner uses its own Node container)
-- Doppler CLI 3.76, with access to the project
+- Doppler CLI 3.76, to deploy (not needed locally)
 - `gh` (GitHub CLI), for cutting releases
 
 ## First run
 
 ```bash
-# 1. Bind this checkout to the Doppler project (doppler.yaml selects config `dev`).
-#    Optional locally: without Doppler every value falls back to the defaults
-#    in docker-compose.yml.
-doppler login && doppler setup
+# 1. Start the stack (db on 127.0.0.1:3308, php-fpm, Caddy on 8080). No secrets
+#    needed: every value has a local default in docker-compose.yml.
+#    If something already owns a port: HTTP_PORT=8090 DB_HOST_PORT=3309 docker compose up -d
+docker compose up -d
 
-# 2. Start the stack (db on 127.0.0.1:3308, php-fpm, Caddy on 8080).
-#    If something already owns a port: HTTP_PORT=8090 DB_HOST_PORT=3309 doppler run -- docker compose up -d
-doppler run -- docker compose up -d
-
-# 3. Create the schema.
+# 2. Create the schema.
 docker compose exec php vendor/bin/phinx migrate -e development
 
-# 4. Seed one local account per level. Prints the password (override with SEED_PASSWORD).
+# 3. Seed one local account per level. Prints the password (override with SEED_PASSWORD).
 #      owner@example.test   admin@example.test   user@example.test
 docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
 
-# 5. Build the frontend into src/public.
+# 4. Build the frontend into src/public.
 (cd src/frontend && npm ci && npm run build)
 ```
 
@@ -110,7 +106,7 @@ Open <http://localhost:8080> and sign in as `owner@example.test` with the passwo
 
 The seeder refuses to run unless `APP_ENV` is `development`, `local` or `testing`: it creates an owner with a known password, which is the last thing that should ever reach production.
 
-Every command that needs secrets runs under `doppler run -- <cmd>`. There is no `.env` file anywhere: Doppler injects values into Compose, which passes them to the container. Nothing sensitive is ever written to disk.
+There is no `.env` file anywhere. Locally there are no secrets to hold; in production Doppler injects them into Compose, which passes them to the container, so nothing sensitive is ever written to disk.
 
 ## Tests
 
@@ -151,6 +147,3 @@ The dev server runs on 5173 and proxies `/api`, `/cron` and `/webhooks` to `http
 ## License
 
 [MIT](LICENSE). A project started from [Waffle](https://github.com/treehousetim/waffle) is yours to license however you like; keep the `LICENSE` file's notice with any substantial part of treehousetim/waffle you redistribute.
-
-
-Impact-Site-Verification: 6ad71094-6286-4721-8d9e-0fa7a828f830

@@ -97,7 +97,7 @@ echo "    complete"
 # 3. Doppler.
 #
 # Secrets are INJECTED, never written to disk. Every compose invocation below
-# runs under `doppler run --`, which puts the `prd` config in Compose's
+# runs under `doppler run --`, which puts the `prod-serve` config in Compose's
 # environment; docker-compose.yml interpolates those into the container, and
 # php-fpm passes them to workers (the official image sets clear_env = no).
 # `docker compose exec` inherits the container environment, so phinx sees them
@@ -106,7 +106,7 @@ echo "    complete"
 # There is no .env on this host. Nothing sensitive is at rest, and a deploy
 # that dies halfway cannot leave a stale secrets file behind.
 #
-# The server holds its own service token, scoped to `prd`:
+# The server holds its own service token, scoped to `prod-serve`:
 #   doppler configure set token <token> --scope /opt/waffle
 # The GitHub runner's token is a different one, scoped to `prod-deploy`, which
 # holds only the four deploy credentials — so production secrets never pass
