@@ -15,7 +15,7 @@ It is for people with some engineering skill who want their own custom website: 
 
 **Read what the agent writes.** AI makes confident mistakes. The tests catch many of them, not all, and you are responsible for what you deploy.
 
-**Status: early.** No release has been tagged yet, and the full test suite has not yet been run end to end.
+**Status: early preview.** v0.1.0 was released so Packagist can list the package; the full test suite has not yet been run end to end.
 
 A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 behind Caddy (automatic HTTPS), MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server deployed by GitHub Actions — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
 

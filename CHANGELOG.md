@@ -35,6 +35,9 @@ Each release moves everything under `[Unreleased]` into its own section
 - **The form-body refusal decodes the path first.** `POST /%61pi/auth/login` with a form body reached the login route, because the router decodes the path and the check did not.
 - **Sign-in refuses every account status but normal.** It checked only Delight's `isSuspended()`, so a banned, locked, archived or pending account got one successful sign-in before `AuthMiddleware` ended it.
 
+
+### Known issues
+- The full test suite has not yet been run end to end. This release exists so Packagist can list the package; treat it as a preview.
 ## [0.0.1] - 2026-10-12
 
 ### Added
