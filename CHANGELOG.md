@@ -38,6 +38,7 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ### Known issues
 - The full test suite has not yet been run end to end. This release exists so Packagist can list the package; treat it as a preview.
+
 ## [0.0.1] - 2026-10-12
 
 ### Added
