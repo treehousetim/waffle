@@ -1,0 +1,108 @@
+# Local development stack.
+#
+#   doppler run -- docker compose up -d   -> http://localhost:8080
+#   ./tools/test.sh                       -> runs the suite inside the php container
+#
+# No `version:` key: it is obsolete under Compose v2+ and only produces a warning.
+#
+# Secrets come from Doppler, injected via `doppler run -- docker compose ...`
+# for the ${...} interpolation below, and passed into PHP-FPM. Every value has a
+# local default after `:-` so a fresh clone comes up before Doppler is wired —
+# and the DB defaults are exactly what .env.testing assumes.
+#
+# THE ENVIRONMENT BLOCK OF THE php SERVICE IS THE AUTHORITATIVE LIST OF CONFIG
+# KEYS. Adding a config value means adding it there *and* to the Doppler
+# configs; nothing reads a key Compose does not pass through.
+
+services:
+  db:
+    image: mariadb:12.3
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-waffle}
+      MARIADB_USER: ${DB_USER:-waffle}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-waffle}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      # 3308 on the host to stay clear of any local MySQL/MariaDB on 3306.
+      # Loopback only: the development credentials are the defaults above, and
+      # 0.0.0.0 would offer them to everybody on the same network. Override
+      # DB_HOST_PORT in your shell (not in Doppler) if 3308 is taken.
+      - "127.0.0.1:${DB_HOST_PORT:-3308}:3306"
+    volumes:
+      - ./docker/data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  php:
+    build:
+      context: ./docker/php
+      args:
+        PHP_INI: ${PHP_INI:-php.ini}
+    working_dir: /var/www
+    # Secrets are INJECTED, not written to disk.
+    #
+    # There is no .env file anywhere in this design. Compose is invoked under
+    # `doppler run --`, which puts the secrets in Compose's own environment;
+    # each value below is interpolated from there into the container. Nothing
+    # sensitive is ever at rest on the server, and a failed deploy cannot leave
+    # a stale half-written secrets file behind.
+    #
+    # Two things make this work, both verified rather than assumed:
+    #   - the official php:fpm image sets `clear_env = no` in
+    #     /usr/local/etc/php-fpm.d/docker.conf, so the container environment
+    #     reaches FPM workers (the default, clear_env = yes, would not)
+    #   - `docker compose exec` inherits the container environment, so phinx
+    #     sees these during migrations without any extra plumbing
+    environment:
+      # composer runs as root in this container; skip its interactive warning.
+      COMPOSER_ALLOW_SUPERUSER: "1"
+
+      # Defaulted to `development` so that a plain `docker compose up` is
+      # explicitly a development box. UserSeeder allowlists this value; in
+      # production docker-compose.prod.yml pins APP_ENV=production and the
+      # seeder refuses. Behaviour is governed by APP_DEBUG, off unless asked.
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-}
+
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-waffle}
+      DB_USER: ${DB_USER:-waffle}
+      DB_PASSWORD: ${DB_PASSWORD:-waffle}
+
+      CRON_SECRET: ${CRON_SECRET:-}
+
+      # Bootstrap credentials for the very first owner account, read once by
+      # the CreateInitialOwner migration. Both may be deleted from Doppler
+      # after the account exists — the migration is recorded in phinxlog by
+      # then, and skips on its own regardless.
+      FIRST_USERNAME: ${FIRST_USERNAME:-}
+      FIRST_USER_PASSWORD: ${FIRST_USER_PASSWORD:-}
+    volumes:
+      - .:/var/www
+      # vendor/ lives in a named volume: it stays out of the bind mount so
+      # installs are fast and host/container platform builds never collide.
+      - vendor_data:/var/www/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "composer install --no-interaction && exec php-fpm"
+
+  nginx:
+    image: nginx:1.31
+    ports:
+      # 8080 is the documented local port. Override HTTP_PORT in your shell
+      # (not in Doppler) if something else on the machine already owns it.
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+    depends_on:
+      - php
+
+volumes:
+  vendor_data:

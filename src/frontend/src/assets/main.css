@@ -1,0 +1,174 @@
+/*
+ * Deliberately small: enough that the skeleton is pleasant to look at, not a
+ * design system. Colours are tokens so a theme is one block to change.
+ */
+
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --text: #1c2230;
+  --muted: #6b7280;
+  --border: #e3e6eb;
+  --accent: #3355ff;
+  --danger: #c62828;
+  --radius: 8px;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151c;
+    --surface: #1b2029;
+    --text: #e6e8ec;
+    --muted: #9aa3b2;
+    --border: #2b313c;
+    --accent: #7d93ff;
+    --danger: #ef6b6b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+input,
+select {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 220px;
+  padding: 1.25rem;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sidebar a.router-link-exact-active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.brand {
+  margin-bottom: 1rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+}
+
+.who small,
+.version {
+  color: var(--muted);
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.login form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(360px, 100%);
+}
+
+.login label,
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.setting {
+  margin-bottom: 1rem;
+}
+
+.setting small {
+  color: var(--muted);
+}
+
+fieldset.card {
+  margin: 0 0 1rem;
+}
+
+legend {
+  padding: 0 0.25rem;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}

@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domain\Auth\Permission;
+use Tests\TestCase;
+
+/*
+ * The route table AccessGridTest walks (docs/access-levels.md): what every
+ * /api route needs, written apart from the route files on purpose. A route
+ * added without a line here fails AccessGridTest, so none can ship unguarded
+ * by accident.
+ */
+
+/** Routes open to anybody, or to any signed-in session: not guarded by a level. */
+const UNGUARDED = [
+    'POST /api/auth/login',
+    'POST /api/auth/logout',
+    // Any signed-in session may ask who it is, whatever its level.
+    'GET /api/auth/me',
+];
+
+/** @return array<string,Permission> "METHOD pattern" => permission */
+function guardedRoutes(): array
+{
+    return [
+        'GET /api/hello' => Permission::Home,
+        'GET /api/settings' => Permission::SettingsView,
+        'PUT /api/settings' => Permission::SettingsEdit,
+    ];
+}
+
+/**
+ * Every registered route under /api, as "METHOD pattern", sorted.
+ *
+ * @return list<string>
+ */
+function registeredApiRoutes(): array
+{
+    $routes = [];
+
+    foreach (TestCase::app()->getRouteCollector()->getRoutes() as $route) {
+        if (!str_starts_with($route->getPattern(), '/api/')) {
+            continue;
+        }
+
+        foreach ($route->getMethods() as $method) {
+            $routes[] = $method . ' ' . $route->getPattern();
+        }
+    }
+
+    sort($routes);
+
+    return $routes;
+}
+
+/** A pattern with every placeholder filled, so it can be requested. */
+function concrete(string $pattern): string
+{
+    return (string) preg_replace('/\{[^}]+\}/', '1', $pattern);
+}

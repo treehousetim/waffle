@@ -1,0 +1,256 @@
+name: Deploy
+
+# Releases only. Nothing deploys from a branch push.
+on:
+  release:
+    types: [published]
+
+# One deploy at a time. Two releases published close together would otherwise
+# rsync over each other mid-transfer.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+# Every action is pinned to a commit (the major version is in the comment,
+# when this template was written). A tag can be moved by whoever controls the
+# action's repository; a commit cannot, and this job holds the production
+# server's key. Re-pin deliberately, never to a moving tag.
+
+jobs:
+  deploy:
+    name: Build and ship ${{ github.event.release.tag_name }}
+    runs-on: ubuntu-latest
+
+    # A GitHub *environment*, not repo-level secrets.
+    #
+    # DOPPLER_TOKEN lives on this environment, so only a job that declares it
+    # can read the value — an unrelated workflow in this repository cannot.
+    # It is also where deployment protection rules hang: required reviewers,
+    # wait timers, and a tag policy restricting deploys to v* refs.
+    #
+    # `url` is what the Deployments view links to once this job succeeds.
+    environment:
+      name: prod
+      url: https://waffle.example.com
+
+    steps:
+      # -------------------------------------------------------------------
+      # The tag is text somebody typed, and it reaches a shell on the server.
+      # Only a plain version goes further. Read through the environment, never
+      # spliced into a script with ${{ }}, where a quote in it would be code.
+      # -------------------------------------------------------------------
+      - name: Refuse anything but a version tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::release tag is not vX.Y.Z; refusing to deploy it"
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      # -------------------------------------------------------------------
+      # The release tag, not the branch. A release published from an older
+      # commit must ship that commit.
+      # -------------------------------------------------------------------
+      - name: Check out the release tag
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      # -------------------------------------------------------------------
+      # Build the frontend. `npm run build` clears ../public/assets and
+      # ../public/index.html first, so what lands is only this tag's output.
+      # -------------------------------------------------------------------
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Build the frontend
+        working-directory: src/frontend
+        run: |
+          npm ci
+          npm run build
+
+      # -------------------------------------------------------------------
+      # Build vendor/ HERE, not on the server.
+      #
+      # The server has no composer and no route to Packagist, so a deploy
+      # cannot half-fail because a package server was down, and production
+      # never needs outbound access to install anything.
+      #
+      # The extensions match composer.json's platform requirements so the
+      # install is checked honestly rather than with --ignore-platform-req.
+      # -------------------------------------------------------------------
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo, pdo_mysql, zip, json
+          coverage: none
+
+      - name: Install PHP dependencies (production)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+      # -------------------------------------------------------------------
+      # Prove the artifact is complete before touching production. deploy.sh
+      # checks this too, but failing here costs nothing and leaves the running
+      # release untouched.
+      # -------------------------------------------------------------------
+      - name: Verify the release artifact
+        run: |
+          set -euo pipefail
+          for required in vendor/autoload.php src/public/index.php src/public/index.html; do
+            [ -e "$required" ] || { echo "::error::missing $required"; exit 1; }
+          done
+          [ -d src/public/assets ] || { echo "::error::missing src/public/assets"; exit 1; }
+          echo "artifact complete"
+
+      # -------------------------------------------------------------------
+      # Secrets.
+      #
+      # DOPPLER_TOKEN is the ONLY GitHub secret, it lives on the `prod`
+      # environment rather than the repository, and it is scoped to Doppler's
+      # `prod-deploy` config — which holds nothing but the four deploy
+      # credentials below. The production application secrets live in the
+      # separate `prd` config and are pulled by the server itself with its own
+      # token, so they never touch this runner.
+      #
+      # Loaded only now, after npm and composer: both run code from the
+      # packages they install, and anything run after this step can read the
+      # server's key from the environment.
+      # -------------------------------------------------------------------
+      - name: Install the Doppler CLI
+        uses: dopplerhq/cli-action@014df23b1329b615816a38eb5f473bb9000700b1 # v3
+
+      - name: Load deploy credentials from Doppler
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          for name in DROPLET_HOST DROPLET_USER DROPLET_SSH_KEY DROPLET_SSH_KNOWN_HOSTS; do
+            value="$(doppler secrets get "$name" --plain)"
+
+            if [ -z "$value" ]; then
+              echo "::error::${name} is empty in Doppler's prod-deploy config"
+              exit 1
+            fi
+
+            # Mask before anything can echo it, including a later `set -x`.
+            while IFS= read -r line; do
+              [ -n "$line" ] && echo "::add-mask::$line"
+            done <<< "$value"
+
+            {
+              echo "${name}<<__DOPPLER_EOF__"
+              echo "$value"
+              echo "__DOPPLER_EOF__"
+            } >> "$GITHUB_ENV"
+          done
+
+      # -------------------------------------------------------------------
+      # SSH. known_hosts comes from Doppler rather than ssh-keyscan, which
+      # would trust whatever answers on the day.
+      # -------------------------------------------------------------------
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DROPLET_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DROPLET_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # -------------------------------------------------------------------
+      # Ship it.
+      #
+      # --delete so a file removed in this release is removed on the server.
+      # Excluded paths are NOT deleted by --delete (that would need
+      # --delete-excluded, which is deliberately absent), which is what
+      # protects the four things below that live only on the server:
+      #
+      #   .env          there is none; excluded defensively so a stray one is
+      #                 never shipped or deleted
+      #   docker/data/  the MariaDB data directory — deleting this is the
+      #                 whole database
+      #   .deploy/      deploy state: last tag, last docker/ hash
+      #   backups/      tools/backup-prod-db.sh output
+      #
+      # tests/ and phpunit.xml are dev-only and never ship. .env.testing is a
+      # test fixture; phinx.php tolerates its absence (see the guard there).
+      #
+      # src/app/phinx/seeds/ is excluded because phinx is a runtime `require`,
+      # so `phinx seed:run -e production` is available on the server. UserSeeder
+      # refuses to run outside development on its own, but not shipping it at all
+      # means the command has nothing to execute. Migrations are unaffected —
+      # `phinx migrate` never reads the seeds path.
+      # -------------------------------------------------------------------
+      - name: Rsync the release to the server
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes" \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'node_modules/' \
+            --exclude 'src/frontend/node_modules/' \
+            --exclude 'tests/' \
+            --exclude 'src/app/phinx/seeds/' \
+            --exclude 'phpunit.xml' \
+            --exclude '.env' \
+            --exclude '.env.testing' \
+            --exclude '.deploy/' \
+            --exclude 'docker/data/' \
+            --exclude 'backups/' \
+            --exclude 'coverage/' \
+            --exclude '.phpunit.cache/' \
+            ./ "${DROPLET_USER}@${DROPLET_HOST}:/opt/waffle/"
+
+      # -------------------------------------------------------------------
+      # Bring it into service. deploy.sh was rsync'd a moment ago, so the
+      # version invoked here is this release's — no re-exec needed.
+      # -------------------------------------------------------------------
+      - name: Run the deploy
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o StrictHostKeyChecking=yes \
+            "${DROPLET_USER}@${DROPLET_HOST}" \
+            "bash /opt/waffle/deploy/deploy.sh '$TAG'"
+
+      # -------------------------------------------------------------------
+      # A failed deploy says so where people look. Optional:
+      # DEPLOY_ALERT_WEBHOOK, a Slack incoming-webhook URL in Doppler's
+      # prod-deploy config. Without it, the failed run here is the only notice.
+      # -------------------------------------------------------------------
+      - name: Tell Slack the deploy failed
+        if: failure()
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          set -uo pipefail
+          url="$(doppler secrets get DEPLOY_ALERT_WEBHOOK --plain 2>/dev/null || true)"
+
+          if [ -z "$url" ]; then
+            echo "No DEPLOY_ALERT_WEBHOOK in Doppler's prod-deploy config; nothing sent."
+            exit 0
+          fi
+
+          echo "::add-mask::$url"
+          text="The deploy of ${TAG:-a release} failed: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -fsS -m 10 -H 'Content-Type: application/json' -d "$(jq -n --arg text "$text" '{text: $text}')" "$url" >/dev/null \
+            || echo "::warning::the deploy alert could not be sent"
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts

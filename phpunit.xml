@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         colors="true"
+         failOnWarning="true"
+         failOnNotice="true"
+         failOnRisky="true"
+         failOnEmptyTestSuite="true"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerNotices="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Schema">
+            <directory>tests/Schema</directory>
+        </testsuite>
+        <testsuite name="Arch">
+            <directory>tests/Arch</directory>
+        </testsuite>
+    </testsuites>
+
+    <!--
+        Coverage source = src/app, minus the code that only exists to reach the
+        network and minus Phinx migrations/seeds (exercised by running them, not
+        by asserting on them).
+
+        External API clients live in Libraries/Clients precisely so they can be
+        excluded as a whole directory; do not put coverable logic there.
+    -->
+    <!--
+        ignoreIndirectDeprecations hides deprecations raised inside vendor code
+        (e.g. Delight\Auth declaring implicitly-nullable parameters). Our own
+        deprecations are still reported.
+
+        Only attributes that exist in vendor/phpunit/phpunit/phpunit.xsd may be
+        used here: an unknown one fails schema validation, and PHPUnit then
+        discards this whole element — silently disabling the source filter and
+        coverage collection while the run still looks green.
+    -->
+    <source ignoreIndirectDeprecations="true">
+        <include>
+            <directory suffix=".php">src/app</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">src/app/phinx</directory>
+            <directory suffix=".php">src/app/Libraries/Clients</directory>
+        </exclude>
+    </source>
+
+    <!--
+        Coverage reports are NOT declared here on purpose.
+
+        Declaring <report> children turns coverage collection on for every run.
+        With no driver installed PHPUnit then aborts before running a single
+        test and prints only "No code coverage driver available" — a silent
+        red run that looks like a broken suite. tools/test.sh passes the
+        clover and html coverage flags itself when coverage is asked for,
+        after it has made sure pcov is loaded.
+    -->
+</phpunit>

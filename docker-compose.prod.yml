@@ -1,0 +1,68 @@
+# Production overrides for the server at /opt/waffle.
+#
+# Always used together with the base file, never on its own:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# deploy/deploy.sh invokes it exactly that way.
+
+# `!override` (Compose v2.24+) REPLACES the base list instead of appending to
+# it. Without it, Compose merges port lists and the server would also publish
+# the local-dev ports. A firewall would block them, but publishing them at all
+# is a mistake we should not rely on a firewall to cover.
+
+services:
+  db:
+    # Bound to loopback only: nothing outside the server may reach MariaDB.
+    ports: !override
+      - "127.0.0.1:3306:3306"
+    restart: unless-stopped
+
+  php:
+    build:
+      args:
+        # opcache on, validate_timestamps=0, display_errors off.
+        # deploy.sh restarts this service after every deploy to clear opcache.
+        PHP_INI: php.prod.ini
+
+    # Pinned here rather than left to Doppler. The base file falls back to
+    # `development` when the variable is missing, and development is what lets
+    # the seeder create accounts with a known password. A literal beats
+    # interpolation, so no Doppler edit can undo it.
+    environment:
+      APP_ENV: production
+      APP_DEBUG: ""
+
+    # !override REPLACES the base file's volume list.
+    #
+    # The base file keeps vendor/ in a named volume (vendor_data). In
+    # production that would be actively wrong: the runner builds vendor/ with
+    # --no-dev and rsyncs it here, and a named volume mounted over
+    # /var/www/vendor would hide it behind whatever was installed first. The
+    # bind mount is the whole point — the shipped vendor/ is the one that runs.
+    volumes: !override
+      - .:/var/www
+
+    # No composer on the server. vendor/ arrives complete from the runner, so a
+    # deploy cannot half-fail because Packagist was unreachable.
+    command: sh -c "exec php-fpm"
+    restart: unless-stopped
+
+  nginx:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/production.conf:/etc/nginx/conf.d/default.conf:ro
+      # See docker/nginx/security-headers.conf for why this is its own file.
+      # Without this mount nginx refuses to start, which is the failure mode to
+      # want — the alternative is a server with no security headers.
+      - ./docker/nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+      # Let's Encrypt material, read-only. Certificate paths inside
+      # production.conf are set at first provision (docs/fresh-install.md).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # The ACME webroot. certbot renews with `--webroot -w /var/www/certbot`
+      # on the host; without this mount every challenge 404s, silently, and
+      # the failure lands 90 days after the first certificate.
+      - /var/www/certbot:/var/www/certbot:ro
+    restart: unless-stopped

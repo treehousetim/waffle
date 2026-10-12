@@ -1,0 +1,46 @@
+# PHP dependencies — installed by composer inside the php container.
+/vendor/
+
+# Node dependencies — installed by `npm ci` in src/frontend.
+node_modules/
+
+# Secrets. There is no .env: secrets are injected by `doppler run --`. The
+# ignore stays so a stray one can never be committed. The glob covers
+# .env.local / .env.prod / .env.production too — under the "no env files
+# anywhere" rule every one of them is a mistake. `.env.testing` is the one
+# exception: a committed fixture holding dummy values and the test database
+# name, no secrets.
+.env*
+!.env.testing
+
+# MariaDB data directory bind-mounted by the local `db` service.
+/docker/data/
+
+# Vite build output. `npm run build` in src/frontend empties ../public/assets
+# and writes the hashed bundle plus index.html there, so both are build
+# artifacts and must never be committed.
+/src/public/assets/
+/src/public/index.html
+
+# Database dumps written by tools/backup-prod-db.sh.
+/backups/
+
+# Deploy state written on the server by deploy/deploy.sh: the last released
+# tag, the previous tag, the content hash of docker/, the cron header file.
+/.deploy/
+
+# Coverage, E2E artifacts and test-runner output.
+/coverage/
+clover.xml
+.phpunit.cache/
+.pest/
+
+# macOS Finder metadata.
+.DS_Store
+
+# Editor / IDE directories.
+.idea/
+.vscode/
+
+# Log files.
+*.log

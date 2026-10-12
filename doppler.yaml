@@ -1,0 +1,28 @@
+# Doppler project binding.
+#
+# One Doppler project with three configs, each the root of its own environment
+# and inheriting nothing. The split is a blast-radius boundary, not
+# bookkeeping:
+#
+#   dev          local development.  Selected by `doppler setup` (below).
+#
+#   prd          the production application secrets. Read ONLY by the server,
+#                using its own service token scoped to /opt/waffle:
+#                    doppler configure set token <token> --scope /opt/waffle
+#                These never pass through CI.
+#
+#   prod-deploy  exactly four deploy credentials, and nothing else:
+#                    DROPLET_HOST  DROPLET_USER
+#                    DROPLET_SSH_KEY  DROPLET_SSH_KNOWN_HOSTS
+#                Read by the GitHub Actions runner through DOPPLER_TOKEN, which
+#                lives on the `prod` GitHub *environment* (not as a repository
+#                secret) and is gated by a v* tag policy. Because this config
+#                holds no application secrets, a compromised runner cannot
+#                reach one.
+#
+# This file records only which project/config to use. No secret values ever
+# live in this repository, and there is no .env file anywhere: secrets are
+# injected at container start with `doppler run -- docker compose up -d`.
+setup:
+  project: waffle
+  config: dev
