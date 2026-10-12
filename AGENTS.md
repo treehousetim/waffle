@@ -20,6 +20,17 @@ Phase status:
 - **Phase 1 — skeleton. Done.** The whole stack runs end to end: `./tools/setup.sh` once (or `composer create-project treehousetim/waffle <dir>`, which runs it), `docker compose up -d`, `phinx migrate`, `phinx seed:run -s UserSeeder`, `npm run build`, then sign in at `http://localhost:8080` as the seeded owner and see the hello page. `./tools/test.sh --coverage` is green at 100%: feature tests for login/logout/me and the hello route (including the 401/403 paths), the access grid walked for every route and level, unit tests for the middleware and `BaseController`, a `Schema` test proving DDL isolation, the arch suite, an E2E journey that writes a repeatable artifact, and the frontend's Node suite. **Settings** ships as the worked example of a feature slice (`docs/settings.md`).
 - **Phase 2 — the first real feature.** Write its failure list first (`docs/adding-a-feature.md`), then its tests, then its code, as a slice. Every item ships with its tests in the same change. Do not start a feature that the skeleton cannot run.
 
+### First session in a new project
+
+If `composer.json`'s `name` is still `treehousetim/waffle`, or the paragraph at the top of this section still says **Replace this paragraph**, the project has not been set up yet. Before anything else:
+
+1. **Name it, with the script — never by hand.** Ask the user for the slug, display name and production hostname. Offer the suggestions from `./tools/setup.sh --suggest "$(basename "$PWD")"` (one per line: slug, name, host); a placeholder hostname is fine if they do not have one yet. Then run `./tools/setup.sh --slug <slug> --name "<name>" --host <host> --yes`, adding `--no-git` if the user wants to make the first commit themselves. If the script refuses an answer, show its message and ask again; do not work around it.
+2. **Fill in this section's first paragraph.** Interview the user: what the application does, for whom, and what it is the system of record for. Draft two or three sentences, show them, and write them only once the user agrees.
+3. **Plan the first feature, don't build it yet.** Ask what it is, then write its numbered failure list in `docs/<slice>.md` (`docs/adding-a-feature.md` has the template) and review it with the user. Tests and code come after that review, per §7.
+4. **Deployment only when asked.** Follow `docs/fresh-install.md`; `./tools/setup-github.sh` does the GitHub half. Secret values are the user's to type into Doppler: never ask for one in chat, never put one on a command line or in a file, and never create or fill a Doppler config on their behalf.
+
+Ask before starting the Docker stack; nothing in steps 1–3 needs it.
+
 ---
 
 ## 2. Stack
@@ -99,6 +110,7 @@ tools/
   changed-groups.sh       # maps changed paths to test groups, for --changed
   backup-prod-db.sh       # nightly dump on the server, keeps 14
   setup.sh                # guided first-time setup: checks, names, lock files, first commit
+  setup-github.sh         # the prod GitHub environment (v* tags) and its Doppler token, piped
   rename-project.sh       # the rename itself, once, when the template becomes a project
   installer/              # composer create-project hook; hands over to setup.sh
 tests/

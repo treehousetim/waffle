@@ -180,6 +180,20 @@ environment `prod`:
    workflow can read it.
 3. Optional: required reviewers.
 
+Steps 13 and 14 are one command, once `prod-deploy` is filled (step 12) and
+`gh` and `doppler` are signed in:
+
+```bash
+./tools/setup-github.sh
+```
+
+It creates the `prod` environment with only the `v*` tag rule, checks that
+`prod-deploy` holds the deploy credentials and nothing more, and pipes a new
+read-only token straight from Doppler into the environment secret, so the
+token is never shown or put on a command line. It is safe to re-run; it
+replaces an existing token only with `--rotate-token`. Required reviewers
+(step 14.3) stay a manual choice. Its failure list is in the appendix.
+
 **15. Protect `main`** (Settings → Branches): pull requests required.
 
 ## Part E — The first release
@@ -228,3 +242,27 @@ The authoritative list is the `environment:` block of the `php` service in
 | `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY`, `DROPLET_SSH_KNOWN_HOSTS` | prod-deploy | yes | step 12 |
 | `DEPLOY_ALERT_WEBHOOK` | prod-deploy | no | step 11 |
 | `DOPPLER_TOKEN` | GitHub `prod` environment | yes | step 14 |
+
+## Appendix — `tools/setup-github.sh` failure list
+
+Each has a test in `tests/Unit/SetupGithubTest.php`, which runs the script
+against stand-in `gh` and `doppler` commands.
+
+1. `gh` is missing or not signed in, and the script fails halfway.
+2. `doppler` is missing or not signed in.
+3. The repository cannot be worked out (no GitHub remote), and the script
+   guesses.
+4. The `prod-deploy` config does not exist, and a token is issued for nothing.
+5. `prod-deploy` holds keys beyond the deploy credentials (somebody clicked
+   "Add missing value"), and a token that can read production secrets is
+   handed to CI.
+6. A deploy credential is missing from `prod-deploy`, and the first release
+   fails at the SSH step instead of here.
+7. The `prod` environment already allows a branch, or another tag pattern, to
+   deploy, and the script leaves it that way without saying.
+8. A re-run adds a second `v*` rule.
+9. A re-run silently replaces a working `DOPPLER_TOKEN`.
+10. The token appears in the terminal or on a command line, where `ps` and
+    shell history would keep it.
+11. The token can write to Doppler.
+

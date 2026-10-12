@@ -13,6 +13,8 @@ version in `src/frontend/package.json` has one.
 
 ### Added
 - **`tools/setup.sh`, a guided first-time setup**: checks the machine and says how to install what is missing, asks for the slug, display name and hostname (suggesting each), renames, refreshes both lock files without starting the project, offers the first commit, and prints what is next. Every answer is also a flag, and it is safe to re-run. Runs on macOS (stock bash 3.2), Linux and WSL2; refuses native Windows shells with a pointer to WSL2.
+- **`tools/setup-github.sh`** does the GitHub half of a first deploy in one command: creates the `prod` environment deployable from `v*` tags only, refuses a `prod-deploy` config holding anything but deploy credentials, and pipes a new read-only Doppler token straight into the environment's `DOPPLER_TOKEN`, never printed or on a command line. Safe to re-run; `--rotate-token` replaces the token.
+- **AGENTS.md: "First session in a new project"** tells an agent to name the project with `setup.sh` (never by hand), interview the user for §1, and write the first feature's failure list before any code; and never to handle secret values.
 - **`composer create-project treehousetim/waffle <dir>`** runs that setup (docs/create-project.md, with its failure list).
 - **MIT licence**, and a Packagist description and keywords.
 - **README: services to sign up for, and a documentation table** that replaces `docs/README.md` as the one index.

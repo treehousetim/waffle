@@ -46,6 +46,7 @@ it('parses every shell script without a syntax error', function (string $script)
     'tools/backup-prod-db.sh',
     'tools/rename-project.sh',
     'tools/setup.sh',
+    'tools/setup-github.sh',
 ]);
 
 it('renders the crontab with the header file and no heartbeat', function (): void {
