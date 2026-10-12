@@ -12,6 +12,8 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-12
+
 ### Added
 - **`tools/setup.sh`, a guided first-time setup**: checks the machine and says how to install what is missing, asks for the slug, display name and hostname (suggesting each), renames, refreshes both lock files without starting the project, offers the first commit, and prints what is next. Every answer is also a flag, and it is safe to re-run. Runs on macOS (stock bash 3.2), Linux and WSL2; refuses native Windows shells with a pointer to WSL2.
 - **`tools/setup-github.sh`** does the GitHub half of a first deploy in one command: creates the `prod` environment deployable from `v*` tags only, refuses a `prod-deploy` config holding anything but deploy credentials, and pipes a new read-only Doppler token straight into the environment's `DOPPLER_TOKEN`, never printed or on a command line. Safe to re-run; `--rotate-token` replaces the token.
