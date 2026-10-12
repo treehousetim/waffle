@@ -17,7 +17,7 @@ This is the instruction file for anyone (human or AI agent) working in this repo
 
 Phase status:
 
-- **Phase 1 — skeleton. Done.** The whole stack runs end to end: `./tools/rename-project.sh` once, `doppler setup`, `doppler run -- docker compose up -d`, `phinx migrate`, `phinx seed:run -s UserSeeder`, `npm run build`, then sign in at `http://localhost:8080` as the seeded owner and see the hello page. `./tools/test.sh --coverage` is green at 100%: feature tests for login/logout/me and the hello route (including the 401/403 paths), the access grid walked for every route and level, unit tests for the middleware and `BaseController`, a `Schema` test proving DDL isolation, the arch suite, an E2E journey that writes a repeatable artifact, and the frontend's Node suite. **Settings** ships as the worked example of a feature slice (`docs/settings.md`).
+- **Phase 1 — skeleton. Done.** The whole stack runs end to end: `./tools/setup.sh` once (or `composer create-project treehousetim/waffle <dir>`, which runs it), `doppler setup`, `doppler run -- docker compose up -d`, `phinx migrate`, `phinx seed:run -s UserSeeder`, `npm run build`, then sign in at `http://localhost:8080` as the seeded owner and see the hello page. `./tools/test.sh --coverage` is green at 100%: feature tests for login/logout/me and the hello route (including the 401/403 paths), the access grid walked for every route and level, unit tests for the middleware and `BaseController`, a `Schema` test proving DDL isolation, the arch suite, an E2E journey that writes a repeatable artifact, and the frontend's Node suite. **Settings** ships as the worked example of a feature slice (`docs/settings.md`).
 - **Phase 2 — the first real feature.** Write its failure list first (`docs/adding-a-feature.md`), then its tests, then its code, as a slice. Every item ships with its tests in the same change. Do not start a feature that the skeleton cannot run.
 
 ---
@@ -99,7 +99,9 @@ tools/
   test.sh                 # the only way tests are run
   changed-groups.sh       # maps changed paths to test groups, for --changed
   backup-prod-db.sh       # nightly dump on the server, keeps 14
-  rename-project.sh       # once, when the template becomes a project
+  setup.sh                # guided first-time setup: checks, names, lock files, first commit
+  rename-project.sh       # the rename itself, once, when the template becomes a project
+  installer/              # composer create-project hook; hands over to setup.sh
 tests/
   Pest.php                # uses() bindings: TestCase for Feature/ and Unit/, transaction hooks, GROUPS
   bootstrap.php           # loads .env.testing, guards the DB name, runs migrations once

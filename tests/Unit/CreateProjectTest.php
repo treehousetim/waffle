@@ -20,6 +20,7 @@ function renameFixture(): string
 
     foreach ([
         'tools/rename-project.sh',
+        'tools/setup.sh',
         'tools/installer/CreateProject.php',
         'docs/create-project.md',
         'composer.json',
@@ -94,7 +95,7 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
     $leftovers = [];
 
     foreach (treeContents($this->dir) as $path => $contents) {
-        if (in_array($path, ['tools/rename-project.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE'], true)) {
+        if (in_array($path, ['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE'], true)) {
             continue;
         }
 
@@ -199,7 +200,7 @@ it('never touches the installer, its autoload entry, this document or the licenc
     $after = treeContents($this->dir);
     $composer = json_decode($after['composer.json'], true);
 
-    foreach (['tools/rename-project.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE'] as $path) {
+    foreach (['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE'] as $path) {
         expect($after[$path])->toBe($before[$path], $path);
     }
 
@@ -207,8 +208,35 @@ it('never touches the installer, its autoload entry, this document or the licenc
         ->and($composer['scripts']['post-create-project-cmd'] ?? null)->toBe(['Installer\\CreateProject::postCreate']);
 });
 
+/**
+ * @param list<string> $args
+ * @param array<string,string> $env extra environment, e.g. a PATH with shims
+ *
+ * @return array{0:int,1:string,2:string} [exit code, stdout, stderr]
+ */
+function runSetup(string $dir, array $args, array $env = []): array
+{
+    $process = proc_open(
+        array_merge(['bash', $dir . '/tools/setup.sh'], $args),
+        // No terminal on stdin: the script must never wait for an answer here.
+        [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+        $pipes,
+        $dir,
+        array_merge(['PATH' => (string) getenv('PATH'), 'NO_COLOR' => '1'], $env),
+    );
+    $stdout = (string) stream_get_contents($pipes[1]);
+    $stderr = (string) stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    return [proc_close($process), $stdout, $stderr];
+}
+
 it('suggests a valid slug for whatever the directory is called (12)', function (string $directory, string $slug): void {
-    expect(CreateProject::defaultSlug($directory))->toBe($slug)
+    [$code, $out] = runSetup($this->dir, ['--suggest', $directory]);
+
+    expect($code)->toBe(0)
+        ->and(explode("\n", $out)[0])->toBe($slug)
         ->and($slug)->toMatch('/^[a-z][a-z0-9_]{1,30}$/');
 })->with([
     'already fine' => ['acme', 'acme'],
@@ -221,8 +249,78 @@ it('suggests a valid slug for whatever the directory is called (12)', function (
 ]);
 
 it('suggests a display name and hostname from the slug', function (): void {
-    expect(CreateProject::defaultName('acme_ops'))->toBe('Acme Ops')
-        ->and(CreateProject::defaultHost('acme_ops'))->toBe('acme-ops.example.com');
+    [, $out] = runSetup($this->dir, ['--suggest', 'acme_ops']);
+
+    expect($out)->toBe("acme_ops\nAcme Ops\nacme-ops.example.com\n");
+});
+
+it('sets the project up from flags alone, without a terminal (13)', function (): void {
+    [$code, $out, $err] = runSetup($this->dir, ['--slug', 'acme', '--name', 'Acme Ops', '--host', 'ops.acme.com', '--skip-locks', '--no-git']);
+
+    expect($code)->toBe(0, $err)
+        ->and($out)->toContain('renamed: slug acme, name "Acme Ops", host ops.acme.com')
+        ->and(json_decode((string) file_get_contents($this->dir . '/composer.json'), true)['name'])->toBe('acme/acme');
+});
+
+it('takes the suggestions with --yes', function (): void {
+    [$code, , $err] = runSetup($this->dir, ['--yes', '--skip-locks', '--no-git']);
+    $slug = explode("\n", runSetup($this->dir, ['--suggest', basename($this->dir)])[1])[0];
+
+    expect($code)->toBe(0, $err)
+        ->and(json_decode((string) file_get_contents($this->dir . '/composer.json'), true)['name'])->toBe($slug . '/' . $slug);
+});
+
+it('refuses to guess without a terminal, and touches nothing (14)', function (): void {
+    $before = treeContents($this->dir);
+
+    [$code, , $err] = runSetup($this->dir, ['--slug', 'acme', '--skip-locks', '--no-git']);
+
+    expect($code)->toBe(2)
+        ->and($err)->toContain('--slug, --name and --host')
+        ->and(treeContents($this->dir))->toBe($before);
+});
+
+it('passes on the rename script\'s refusal, and touches nothing (15)', function (): void {
+    $before = treeContents($this->dir);
+
+    [$code, , $err] = runSetup($this->dir, ['--slug', 'Acme', '--name', 'Acme', '--host', 'acme.example.org', '--skip-locks', '--no-git']);
+
+    expect($code)->toBe(2)
+        ->and($err)->toContain('slug')
+        ->and(treeContents($this->dir))->toBe($before);
+});
+
+it('skips the rename when the project is already named, so it can be run again (16)', function (): void {
+    runSetup($this->dir, ['--slug', 'acme', '--name', 'Acme', '--host', 'acme.example.org', '--skip-locks', '--no-git']);
+    $before = treeContents($this->dir);
+
+    [$code, $out, $err] = runSetup($this->dir, ['--skip-locks', '--no-git']);
+
+    expect($code)->toBe(0, $err)
+        ->and($out)->toContain('already named (acme/acme); skipping')
+        ->and(treeContents($this->dir))->toBe($before);
+});
+
+it('stops on a native Windows shell and points at WSL2 (17)', function (string $uname): void {
+    // A uname shim first on PATH stands in for Git Bash, MSYS2 and Cygwin.
+    $bin = $this->dir . '/.shim';
+    mkdir($bin);
+    file_put_contents($bin . '/uname', "#!/bin/sh\necho {$uname}\n");
+    chmod($bin . '/uname', 0o755);
+    $before = treeContents($this->dir);
+
+    [$code, $out] = runSetup($this->dir, ['--yes', '--skip-locks', '--no-git'], ['PATH' => $bin . ':' . getenv('PATH')]);
+
+    expect($code)->toBe(1)
+        ->and($out)->toContain('WSL2')
+        ->and(treeContents($this->dir))->toBe($before);
+})->with(['MINGW64_NT-10.0-22631', 'MSYS_NT-10.0', 'CYGWIN_NT-10.0']);
+
+it('rejects an option it does not know', function (): void {
+    [$code, , $err] = runSetup($this->dir, ['--slgu', 'acme']);
+
+    expect($code)->toBe(2)
+        ->and($err)->toContain('unknown option: --slgu');
 });
 
 it('asks nothing and renames nothing when there is no terminal (11)', function (): void {

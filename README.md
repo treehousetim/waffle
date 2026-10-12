@@ -23,20 +23,36 @@ Each feature gets its own `docs/<slice>.md` holding its design, its numbered fai
 
 ## Making it yours
 
+One command, then answer three questions:
+
 ```bash
 composer create-project treehousetim/waffle acme
 ```
 
-Composer copies [Waffle](https://github.com/treehousetim/waffle) into `acme/` and asks for three names: the slug (database names, the Doppler project, `/opt/<slug>` on the server), the display name, and the production hostname. Each is suggested from the directory name; press enter to take it. [docs/create-project.md](docs/create-project.md) has the details, including how to rename a clone by hand with `./tools/rename-project.sh`. Then:
+Composer copies [Waffle](https://github.com/treehousetim/waffle) into `acme/` and runs the guided setup, `tools/setup.sh`. It:
+
+1. checks your machine for Docker, Compose, git, npm and the Doppler CLI, and says how to install anything missing;
+2. asks for a **slug** (database names, the Doppler project, `/opt/<slug>` on the server), a **display name**, and the **production hostname**, suggesting each from the directory name — press enter to take a suggestion;
+3. renames the project, then refreshes both lock files with the tools on your machine or a throwaway Docker container, without starting the project;
+4. offers to create the git repository and make the first commit;
+5. prints what to do next.
+
+No Composer on your machine? Download or clone the repository and run the same script:
 
 ```bash
-cd acme
-(cd src/frontend && npm install --package-lock-only)
-docker compose up -d && docker compose exec php composer update --lock
-git init && git add -A && git commit -m "Start from treehousetim/waffle"
+git clone --depth 1 https://github.com/treehousetim/waffle.git acme
+cd acme && rm -rf .git && ./tools/setup.sh
 ```
 
-and replace the placeholder paragraph in AGENTS.md §1 with what you are building.
+It is safe to run again: finished steps are skipped. For scripts and CI, every answer has a flag (`./tools/setup.sh --help`):
+
+```bash
+./tools/setup.sh --slug acme --name "Acme Ops" --host ops.acme.com --yes
+```
+
+**Platforms.** macOS (Intel and Apple silicon; the stock bash 3.2 is fine), Linux (any distribution with bash), and Windows inside **WSL2**. Native Windows shells — Git Bash, MSYS2, Cygwin — are not supported, and the script says so and points at WSL2. [docs/create-project.md](docs/create-project.md) has the details.
+
+When it is done, replace the placeholder paragraph in AGENTS.md §1 with what you are building.
 
 ## Services to sign up for
 
