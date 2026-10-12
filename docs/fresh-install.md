@@ -198,19 +198,17 @@ replaces an existing token only with `--rotate-token`. Required reviewers
 
 ## Part E — The first release
 
-**16.** Per AGENTS.md §9: bump `src/frontend/package.json` (and its lock with
-`npm install --package-lock-only`), move `[Unreleased]` in `CHANGELOG.md` into a
-dated section, run `./tools/test.sh --coverage`, commit, then:
+**16.** Record the first release's notes under `## [Unreleased]` in
+`CHANGELOG.md`, commit, then (AGENTS.md §9, docs/releasing.md):
 
 ```bash
-git tag vX.Y.Z && git push origin main --tags
-gh release create vX.Y.Z
-gh run watch
+./tools/release.sh      # v1: version, changelog, gate, tag, push, GitHub release
+gh run watch            # the deploy it started
 ```
 
 | Symptom | Cause |
 | --- | --- |
-| `release tag is not vX.Y.Z` | the tag has another shape; delete it and cut `vX.Y.Z` |
+| `release tag is not vN` | the release was not cut by `./tools/release.sh`; delete it and run the script |
 | `this tree is not a complete release` | the runner's build did not land `vendor/` or `src/public/assets` |
 | `Doppler is installed but cannot read secrets` | step 9 skipped, not scoped to `/opt/waffle`, or not set as `deploy` |
 | `CRON_SECRET is not set in Doppler` | `prod-serve` incomplete (step 5) |

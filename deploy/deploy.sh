@@ -2,7 +2,7 @@
 #
 # deploy/deploy.sh — bring a release that is ALREADY ON DISK into service.
 #
-#   bash deploy/deploy.sh v1.2.3
+#   bash deploy/deploy.sh v7
 #
 # Runs on the server. .github/workflows/deploy.yml has, by this point, already
 # built the frontend and vendor/ on the runner and rsync'd the whole tree here,

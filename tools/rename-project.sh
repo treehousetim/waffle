@@ -127,6 +127,30 @@ if [ -f README.md ]; then
     rm -f README.md.rename-bak
 fi
 
+# A new project starts its own release stream (docs/releasing.md): VERSION 0,
+# never released, and a fresh changelog whose first line records the framework
+# version it started from. Written after the pass above, and the line names
+# treehousetim/waffle, so no later run renames it.
+STARTED_FROM="$(tr -d ' \t\r\n' < VERSION 2>/dev/null || true)"
+if [[ "$STARTED_FROM" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    ORIGIN_LINE="Started from [treehousetim/waffle v${STARTED_FROM}](https://github.com/treehousetim/waffle/releases/tag/v${STARTED_FROM})."
+else
+    ORIGIN_LINE="Started from [treehousetim/waffle](https://github.com/treehousetim/waffle)."
+fi
+printf '0\n' > VERSION
+cat > CHANGELOG.md <<CHANGELOG
+# Changelog
+
+All notable changes to this project are recorded here, in the format of
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases are numbered
+1, 2, 3: \`./tools/release.sh\` cuts the next one (docs/releasing.md).
+
+${ORIGIN_LINE}
+
+## [Unreleased]
+CHANGELOG
+echo "  started VERSION at 0 and a fresh CHANGELOG.md"
+
 echo
 echo "Done. Next:"
 echo "  - refresh the lock files (both name the project):"

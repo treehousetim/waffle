@@ -22,6 +22,11 @@ permissions:
 jobs:
   deploy:
     name: Build and ship ${{ github.event.release.tag_name }}
+    # The framework's own repository publishes releases too (semver, for
+    # Packagist) and has no server: never try to deploy from it. In a project
+    # started from it this is always true. tools/rename-project.sh leaves this
+    # line alone because it names treehousetim/waffle.
+    if: github.repository != 'treehousetim/waffle'
     runs-on: ubuntu-latest
 
     # A GitHub *environment*, not repo-level secrets.
@@ -47,8 +52,8 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::release tag is not vX.Y.Z; refusing to deploy it"
+          if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then
+            echo "::error::release tag is not vN (an app's release number, docs/releasing.md); refusing to deploy it"
             exit 1
           fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"

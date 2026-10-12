@@ -54,12 +54,15 @@ The three names Waffle ships under, everywhere outside `vendor/`,
 - `Waffle` → the display name
 - `waffle` → the slug
 
-Then two things that describe Waffle itself rather than a placeholder:
+Then three things that describe Waffle itself rather than a placeholder:
 
 - `composer.json`'s `name` becomes `<slug>/<slug>` and its `description` the
   display name.
 - README's backronym line becomes a line saying the project is built on Waffle,
   linking `https://github.com/treehousetim/waffle`.
+- The project starts its own release stream (docs/releasing.md): `VERSION`
+  becomes `0`, never released, and `CHANGELOG.md` starts fresh, its first line
+  recording the framework version it was started from.
 
 Any line containing `treehousetim/waffle` is left alone, so that link, and
 anything else pointing at the framework, survives. This document, both scripts,
@@ -102,3 +105,6 @@ against a scratch copy of the files they edit.
     again.
 17. On a native Windows shell the setup script half-works instead of stopping
     with a pointer to WSL2.
+18. The new project inherits the framework's `VERSION` and changelog, so its
+    first release is numbered after the framework's and its changelog tells the
+    framework's history instead of its own.

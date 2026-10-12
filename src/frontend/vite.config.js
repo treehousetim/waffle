@@ -1,11 +1,18 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// npm_package_version is exported by npm when the build runs through an npm
-// script. The fallback keeps a bare `vite build` usable.
-const appVersion = process.env.npm_package_version || '0.0.0'
+// The release, from the repository's VERSION file: the one place a version is
+// written (docs/releasing.md). The fallback keeps a build from a tree without
+// one usable.
+let appVersion = '0'
+try {
+  appVersion = readFileSync(new URL('../../VERSION', import.meta.url), 'utf8').trim() || '0'
+} catch {
+  // No VERSION: build anyway, as release 0.
+}
 
 // https://vite.dev/config/
 export default defineConfig({

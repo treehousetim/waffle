@@ -17,6 +17,7 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
 | [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
 | [docs/settings.md](docs/settings.md) | Adding a setting, or wanting a worked example of a slice | The settings table, the Settings page, and how to add a setting. |
+| [docs/releasing.md](docs/releasing.md) | Cutting a release | `./tools/release.sh`, how versions work for the framework and for an app, and its failure list. |
 | [CHANGELOG.md](CHANGELOG.md) | Cutting a release, or catching up | What changed in each release, and what is waiting under `[Unreleased]`. |
 | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) | The brief is silent on something | Decisions not yet made. Answered ones move to [RESOLVED_QUESTIONS.md](RESOLVED_QUESTIONS.md). |
 

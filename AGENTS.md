@@ -75,6 +75,7 @@ Use exactly these majors, latest patch at install time.
 
 ```
 composer.json             # composer.lock is generated on first install; commit it
+VERSION                   # the last released version, and the only place one is written
 phinx.php                 # reads $_ENV; environments: development, testing, production
 phpunit.xml               # Pest reads this; source filter lives here, coverage reports do not
 src/
@@ -107,6 +108,7 @@ deploy/
   render-crontab.sh
 tools/
   test.sh                 # the only way tests are run
+  release.sh              # the release: version, changelog, gate, tag, push, GitHub release
   changed-groups.sh       # maps changed paths to test groups, for --changed
   backup-prod-db.sh       # nightly dump on the server, keeps 14
   setup.sh                # guided first-time setup: checks, names, lock files, first commit
@@ -291,7 +293,7 @@ Because Delight\Auth touches headers and sessions, bootstrap disables session co
 - **Unit tests for every class in `Domain/`** — state machines for every allowed and forbidden edge, value objects for every way they refuse input — and for every repository or query class with real logic.
 - **Arch tests** in `tests/Arch/` using Pest's `arch()` API: `App\Domain` must not depend on `Slim\`, `Psr\Http\`, `PDO`, `App\Controllers`, `App\Libraries` or any vendor SDK namespace; `App\Models` must not depend on `Slim\`, `Psr\Http\` or `App\Controllers`; only `App\Libraries` may use a vendor SDK (the list in `ArchTest.php` — **add each new SDK's namespace the day you add it**); every controller extends `BaseController`; every class in `src/app` is `strict_types`; no `dd`, `dump`, `var_dump`, `print_r`, `die`, `exit` or `eval` anywhere in `src/app`.
 - **Wiring:** `tests/Unit/ContainerWiringTest.php` builds the *production* container and resolves every port, controller and repository through it, because the test container replaces ports and would otherwise hide a broken definition.
-- **Config that cannot be executed is asserted by shape:** `CaddyfileTest` (security headers on every response, the routing order, caching, the cron port, the certificate volume), `DeployScriptsTest` (every shell script parses; the crontab renders; it calls only routes that exist; the DNS check refuses every bad record), `ReleaseTest` (the version has a changelog section).
+- **Config that cannot be executed is asserted by shape:** `CaddyfileTest` (security headers on every response, the routing order, caching, the cron port, the certificate volume), `DeployScriptsTest` (every shell script parses; the crontab renders; it calls only routes that exist; the DNS check refuses every bad record), `ReleaseTest` (`VERSION` is the one version and has its changelog section; the workflow deploys only `vN` and never from the framework's repository).
 - **The frontend:** pure modules live in `src/frontend/src/utils/` with no imports, and each has a `test/<name>.test.js`. Anything that needs a browser belongs in an E2E test.
 - **Coverage is a ratchet at 100%.** An excluded line needs a `@codeCoverageIgnore` with a one-line reason beside it, and **the only accepted reason is that the branch is unreachable without external infrastructure.**
 
@@ -314,17 +316,19 @@ Doppler is the **only** source of secrets. Today only production has any; local 
 
 ## 9. Release flow
 
-1. Bump `src/frontend/package.json` version to the new tag, run `npm install --package-lock-only` there, stage both files. Versions increment by exactly one at the patch level unless a minor bump is intended.
-   Then move everything under `## [Unreleased]` in `CHANGELOG.md` into a new `## [X.Y.Z] - YYYY-MM-DD` section directly below it, leaving `[Unreleased]` empty, and stage that too. `tests/Unit/ReleaseTest.php` fails the gate until the version in `package.json` has its own section.
-2. Run `./tools/test.sh --coverage`; do not tag on red.
-3. Commit to `main`, `git tag vX.Y.Z && git push origin main --tags`, `gh release create vX.Y.Z`.
-4. GitHub Actions deploys. Never edit code on the server; the emergency manual path is `ssh <user>@<host> "cd /opt/<slug> && bash deploy/deploy.sh vX.Y.Z"` against a tree already on the server.
+`./tools/release.sh` is the release. `docs/releasing.md` has the details and the failure list.
+
+1. Record what changed under `## [Unreleased]` in `CHANGELOG.md` as you go; a release with nothing there is refused.
+2. Run `./tools/release.sh` on a clean `main` that matches `origin/main` (`--dry-run` first if you like). It bumps `VERSION`, moves `[Unreleased]` into a dated section, runs `./tools/test.sh --coverage` (red puts both files back and stops), commits, tags, pushes `main` and the tag together, and publishes the GitHub release with that section as its notes.
+3. Publishing the release is what deploys an app: GitHub Actions takes it from there (`gh run watch`). The emergency manual path is `ssh <user>@<host> "cd /opt/<slug> && bash deploy/deploy.sh vN"` against a tree already on the server.
+
+**Versions.** `VERSION` holds the last released version and is the only place one is written; `tests/Unit/ReleaseTest.php` fails if anything else claims to be it, or if it lacks its changelog section. An app's version is one number (`1`, `2`, `3`; `0` is never released) and its tags are `vN`, the only shape the workflow deploys. The framework's own repository uses semver (`--patch`, `--minor`, `--major`) for Packagist and never deploys: the workflow's job is skipped there.
 
 **Never edit code on the server.** The emergency path re-runs the same idempotent deploy script against a tag; it is not a licence to patch files in place. The next deploy's `rsync --delete` would overwrite anything changed by hand anyway.
 
 What the pipeline does. `.github/workflows/deploy.yml` fires on `release: published` and runs against the **`prod` GitHub environment**, which carries a `v*` tag policy — a release cut from any other ref is blocked before the job starts. Every action is pinned to a commit, not a tag.
 
-The runner refuses a tag that is not `vX.Y.Z`, checks out the release tag, builds the frontend (`npm ci && npm run build`) **and** `vendor/` (`composer install --no-dev --optimize-autoloader`), verifies both landed, then **rsyncs the tree** to `/opt/<slug>` with `--delete`.
+The runner refuses a tag that is not `vN`, checks out the release tag, builds the frontend (`npm ci && npm run build`) **and** `vendor/` (`composer install --no-dev --optimize-autoloader`), verifies both landed, then **rsyncs the tree** to `/opt/<slug>` with `--delete`.
 
 **Nothing is cloned on the server.** There is no git checkout, no deploy key, and no composer in production. A clone would put a source-read credential on the same box as every production secret, and two independent fetches of one tag are two artifacts that merely ought to agree. One rsync of one tested tree removes that.
 

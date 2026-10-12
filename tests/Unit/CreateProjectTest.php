@@ -26,6 +26,8 @@ function renameFixture(): string
         'composer.json',
         'README.md',
         'LICENSE',
+        'VERSION',
+        'CHANGELOG.md',
     ] as $path) {
         @mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
@@ -132,6 +134,19 @@ it('keeps the link back to Waffle, and keeps it intact on a second run (3, 10)',
     expect($first)->toContain('Built on [Waffle](https://github.com/treehousetim/waffle)')
         ->not->toContain('**W**affle')
         ->and(file_get_contents($this->dir . '/README.md'))->toBe($first);
+});
+
+it('starts the project\'s own release stream, recording where it started (18)', function (): void {
+    $waffle = trim((string) file_get_contents($this->dir . '/VERSION'));
+
+    runRename($this->dir, ['acme', 'Acme Ops', 'ops.acme.com']);
+    $changelog = (string) file_get_contents($this->dir . '/CHANGELOG.md');
+
+    expect(file_get_contents($this->dir . '/VERSION'))->toBe("0\n")
+        ->and($changelog)->toContain("Started from [treehousetim/waffle v{$waffle}](https://github.com/treehousetim/waffle/releases/tag/v{$waffle}).")
+        ->and($changelog)->toEndWith("## [Unreleased]\n")
+        // None of the framework's own history comes along.
+        ->and($changelog)->not->toMatch('/^## \[\d/m');
 });
 
 it('refuses a slug that is not a usable database name, and touches nothing (4, 8)', function (string $slug): void {
