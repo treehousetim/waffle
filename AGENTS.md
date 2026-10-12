@@ -76,6 +76,7 @@ Use exactly these majors, latest patch at install time.
 ```
 composer.json             # composer.lock is generated on first install; commit it
 VERSION                   # the last released version, and the only place one is written
+cooldown-exceptions.txt   # packages let into composer.lock inside the week-long cooldown, and why
 phinx.php                 # reads $_ENV; environments: development, testing, production
 phpunit.xml               # Pest reads this; source filter lives here, coverage reports do not
 src/
@@ -109,6 +110,8 @@ deploy/
 tools/
   test.sh                 # the only way tests are run
   npm.sh                  # the only way npm is run: in a container, no install scripts, nothing younger than a week
+  composer.sh             # the only way Composer is run: php container, nothing younger than a week
+  composer-age.php        # the lock-age check composer.sh and ComposerTest share
   release.sh              # the release: version, changelog, gate, tag, push, GitHub release
   changed-groups.sh       # maps changed paths to test groups, for --changed
   backup-prod-db.sh       # nightly dump on the server, keeps 14
@@ -346,7 +349,7 @@ Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://127.0.0.1:808
 ## 10. Gotchas
 
 - **Injected env DOES reach both PHP-FPM and `docker compose exec`.** The official `php:fpm` image sets `clear_env = no` in `/usr/local/etc/php-fpm.d/docker.conf`, so the container environment reaches FPM workers; and `exec` inherits the container environment, which is how `phinx migrate` sees the config.
-- **`vendor/` is a named volume (`vendor_data`) locally.** A `composer install` run on the host does not affect what the container sees, and the host's `vendor/` may look empty or stale. Run composer inside the container: `docker compose exec php composer require ...`. In production it is a plain bind mount of the rsync'd `vendor/`.
+- **`vendor/` is a named volume (`vendor_data`) locally.** A `composer install` run on the host does not affect what the container sees, and the host's `vendor/` may look empty or stale. Run Composer only through `./tools/composer.sh`, which runs it in the php service's container. In production it is a plain bind mount of the rsync'd `vendor/`.
 - **Vite writes into `src/public`.** `outDir` is `../public` with `emptyOutDir: false`, and the `build` script first `rm -rf ../public/assets ../public/index.html`. Both are gitignored build output — never commit them, and never hand-edit them.
 - **Caching is asymmetric on purpose.** Caddy serves `/assets/` with `max-age=31536000, immutable` because Vite hashes filenames, but SPA routes and `index.html` are served `no-cache, no-store, must-revalidate`. If you ever let `index.html` be cached, clients pin themselves to a dead bundle.
 - **The Caddyfile's order is deliberate, and it is one `route`.** Outside a `route`, Caddy sorts directives by its own rules; inside, they run as written, and the security depends on the order (cron and dotfiles refused before anything can serve them). The security headers are `defer`red so PHP cannot overwrite them. `CaddyfileTest` asserts both.
@@ -356,6 +359,7 @@ Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://127.0.0.1:808
 - **Migrations land before the PHP restart.** Production runs OPcache with `validate_timestamps=0`, so the old code keeps serving until `deploy.sh` restarts php — for a few seconds the previous release runs against the new schema. Expand in one release, contract in the next.
 - **A migration that skips is still recorded.** `CreateInitialOwner` with `FIRST_*` empty prints "skipped" and phinx marks it run; deploying again does not retry it. Put the values in `prod-serve` before the first release, or delete its `phinxlog` row and migrate again.
 - **PHP errors go to the log, not the response.** `display_errors` is off in both ini files: the API speaks JSON, and output before the headers stops the session cookie being reissued at sign-in. Read them with `docker compose logs php`. Uncaught exceptions still appear in the JSON error when `APP_DEBUG` is on.
+- **Composer runs only through `./tools/composer.sh`** (`docs/supply-chain.md`), in the php service's container with none of your home directory. After anything that picks versions it refuses a lock holding a package younger than a week and puts the files back; `COMPOSER_COOLDOWN_DAYS=0` lets an urgent fix in and records it in `cooldown-exceptions.txt`. `ComposerTest` fails the suite on a young package nobody recorded, on an `allow-plugins` entry that is not a locked plugin, and on a document or script that tells anyone to pick versions with Composer directly.
 - **npm runs only through `./tools/npm.sh`** (`docs/supply-chain.md`). It runs npm in a throwaway container with only the repository mounted, keeps `node_modules` in a Docker volume (so it is not on disk, and editors will not find it there), turns install scripts off, and adds `--before=<7 days ago>` to anything that picks versions, because a hijacked release is usually pulled within days. `NPM_COOLDOWN_DAYS=0` is for a fix that cannot wait, and says so. Never run `npm` or `npx` directly, and never tell anyone to: `NpmTest` fails on a document or script that does.
 - **Delight\Auth raises PHP 8.5 deprecations** for implicitly nullable parameters. `tests/bootstrap.php` compiles those classes before PHPUnit's handler is installed and `phpunit.xml` ignores indirect deprecations, so the suite stays strict about ours.
 - **Login throttling is off in tests only** (`APP_ENV=testing`). `DelightIdentityTest` builds a throttling instance to prove the 429 path.

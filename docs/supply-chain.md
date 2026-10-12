@@ -80,3 +80,67 @@ stand-in `docker`.
 11. The window is set to something that is not a number of days, and is
     silently treated as no window.
 12. It runs on a native Windows shell and half-works.
+
+# Supply chain: Composer
+
+The same attack reaches PHP through Packagist, with one difference in how it
+runs: Composer never runs a package's own scripts, only **plugins**, and only
+the ones `composer.json` names in `allow-plugins`. So the install-time route is
+narrower, and the cooldown matters more.
+
+## The layers
+
+1. **Nothing younger than a week, enforced twice.** Composer has no `--before`,
+   but `composer.lock` records every package's release time. `./tools/composer.sh`
+   is the only way Composer is run; after anything that picks versions
+   (`require`, `update`, `remove`), it checks the lock, and if a package is
+   younger than `COMPOSER_COOLDOWN_DAYS` (default 7) it puts `composer.json` and
+   `composer.lock` back, reinstalls, and names the package. Second, the test
+   suite fails on a lock holding a package younger than a week
+   (`tests/Unit/ComposerTest.php`), so Composer run any other way is caught
+   before a release.
+2. **An urgent fix is recorded, not hidden.** `COMPOSER_COOLDOWN_DAYS=0` lets a
+   young version in and writes it to `cooldown-exceptions.txt` (package,
+   version, date), which the suite honours. The file is reviewed like code;
+   an entry can be deleted once its week has passed.
+3. **Only named plugins run.** `allow-plugins` lists exactly the plugins in the
+   lock (today only Pest's, which is dev-only), never a wildcard.
+4. **CI runs no third-party code while installing.** The production build is
+   `composer install --no-dev --no-plugins --no-scripts`, from the lock, before
+   any secret is loaded.
+5. **Known vulnerabilities stop a release.** CI runs `composer audit` against
+   the lock after installing and before anything is shipped.
+6. **Composer runs in the php container.** `tools/composer.sh` uses
+   `docker compose run --rm --no-deps php`: the same PHP and extensions as the
+   app, the repository mounted, `vendor/` in its volume, and none of your home
+   directory, so no `~/.composer/auth.json` token and no `~/.ssh`.
+
+```bash
+./tools/composer.sh install                 # exactly the lock
+./tools/composer.sh update                  # newer versions, a week old or more
+./tools/composer.sh require vendor/package  # a new dependency (approval first, AGENTS.md §2)
+COMPOSER_COOLDOWN_DAYS=0 ./tools/composer.sh update vendor/package   # an urgent fix
+```
+
+## Failure list (Composer)
+
+Each has a test in `tests/Unit/ComposerTest.php`; the script is run in a
+scratch copy against a stand-in `docker`.
+
+1. A release from the last week enters `composer.lock` through `require`,
+   `update` or `remove`.
+2. Composer is run some other way and a young release reaches a release
+   anyway.
+3. A package with no recorded release time is waved through as old.
+4. An urgent fix cannot be taken, or is taken without a record.
+5. A refused update leaves `composer.json`, `composer.lock` or `vendor/` in the
+   new state.
+6. A plugin nobody named runs at install time, or a permission outlives the
+   plugin it was for.
+7. CI runs plugins or scripts while building the production `vendor/`.
+8. A known vulnerability ships.
+9. Composer, run from a document's instructions, reads the developer's home
+   directory.
+10. Files Composer writes end up owned by root on Linux.
+11. The window is set to something that is not a number of days.
+12. It runs on a native Windows shell and half-works.

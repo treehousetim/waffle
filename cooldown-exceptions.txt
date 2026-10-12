@@ -1,0 +1,4 @@
+# Packages allowed into composer.lock inside the cooldown (docs/supply-chain.md).
+# One per line: vendor/package exact-version, then the date and why.
+# tools/composer.sh appends here when COMPOSER_COOLDOWN_DAYS=0; delete an
+# entry once its week has passed.

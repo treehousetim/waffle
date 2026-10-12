@@ -106,8 +106,14 @@ jobs:
           extensions: mbstring, pdo, pdo_mysql, zip, json
           coverage: none
 
+      # From the lock, with plugins and scripts off: no third-party code runs
+      # while vendor/ is built. Then the lock is checked against known
+      # vulnerabilities before anything ships (docs/supply-chain.md).
       - name: Install PHP dependencies (production)
-        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+        run: composer install --no-dev --no-plugins --no-scripts --optimize-autoloader --no-interaction --no-progress
+
+      - name: Audit PHP dependencies
+        run: composer audit --locked --no-dev
 
       # -------------------------------------------------------------------
       # Prove the artifact is complete before touching production. deploy.sh
