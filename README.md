@@ -2,7 +2,7 @@
 
 **W**affle **A**pplication **F**ramework **F**or **L**azy **E**ngineers.
 
-A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 behind nginx, MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server deployed by GitHub Actions — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
+A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 behind Caddy (automatic HTTPS), MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server deployed by GitHub Actions — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
 
 What runs today: sign in, sign out, three access levels behind one permission grid, a hello page, and a Settings page as the worked example of a feature slice.
 
@@ -12,6 +12,7 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | --- | --- | --- |
 | [AGENTS.md](AGENTS.md) | Before writing any code | The rulebook: stack, layout, layering rules, SQL conventions, testing rules, secrets, the release flow. Written to be enough on its own, for people and AI agents alike. |
 | [docs/create-project.md](docs/create-project.md) | Starting a project from [Waffle](https://github.com/treehousetim/waffle) | What `composer create-project` asks, what the rename touches and leaves alone, and its failure list. |
+| [docs/https.md](docs/https.md) | Launching on your own hostname, or HTTPS is not coming up | How Caddy gets the certificate, the DNS check, the certificate store, and its failure list. |
 | [docs/fresh-install.md](docs/fresh-install.md) | Putting it on a server for the first time | From nothing to production: Doppler configs, the droplet, the certificate, the GitHub environment, the first release. |
 | [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
 | [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
@@ -65,7 +66,7 @@ When it is done, replace the placeholder paragraph in AGENTS.md §1 with what yo
 
 Needed, but nothing to sign up for:
 
-- **Let's Encrypt** issues the certificate. `certbot` registers with an email address on the server; there is no account to create.
+- **Let's Encrypt** issues the certificate. Caddy asks for it, and renews it, on its own; there is no account to create and nothing to install.
 - **Docker** runs the stack locally. Docker Desktop is free for personal use and small businesses but needs a paid subscription in larger organisations; [OrbStack](https://orbstack.dev) or [Colima](https://github.com/abiosoft/colima) work too.
 
 Optional:
@@ -90,7 +91,7 @@ Optional:
 #    in docker-compose.yml.
 doppler login && doppler setup
 
-# 2. Start the stack (db on 127.0.0.1:3308, php-fpm, nginx on 8080).
+# 2. Start the stack (db on 127.0.0.1:3308, php-fpm, Caddy on 8080).
 #    If something already owns a port: HTTP_PORT=8090 DB_HOST_PORT=3309 doppler run -- docker compose up -d
 doppler run -- docker compose up -d
 
@@ -130,7 +131,7 @@ Tests read `.env.testing` only and never touch Doppler. End-to-end tests write t
 
 | Service | URL / port | Override |
 |---|---|---|
-| nginx (the app) | http://localhost:8080 | `HTTP_PORT` |
+| Caddy (the app) | http://localhost:8080 | `HTTP_PORT` |
 | MariaDB | 127.0.0.1:3308 | `DB_HOST_PORT` |
 | Vite dev server | http://localhost:5173 | |
 

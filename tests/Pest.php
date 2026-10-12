@@ -72,7 +72,7 @@ uses()->group('core')->in(
     'Unit/Models/UserRepositoryTest.php',
     'Unit/Models/HealthRepositoryTest.php',
     'Unit/ContainerWiringTest.php',
-    'Unit/NginxHeadersTest.php',
+    'Unit/CaddyfileTest.php',
     'Unit/ReleaseTest.php',
     'Unit/DeployScriptsTest.php',
     'Unit/CreateProjectTest.php',

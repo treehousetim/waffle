@@ -91,18 +91,26 @@ services:
         condition: service_healthy
     command: sh -c "composer install --no-interaction && exec php-fpm"
 
-  nginx:
-    image: nginx:1.31
+  caddy:
+    # The web server (docker/caddy/Caddyfile, docs/https.md). The same file
+    # serves production, where SITE_ADDRESS is the hostname and Caddy handles
+    # the certificate; here ":80" means plain HTTP and no certificate.
+    image: caddy:2.11
+    environment:
+      SITE_ADDRESS: ":80"
     ports:
       # 8080 is the documented local port. Override HTTP_PORT in your shell
       # (not in Doppler) if something else on the machine already owns it.
       - "${HTTP_PORT:-8080}:80"
     volumes:
-      - .:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./docker/nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+      - .:/var/www:ro
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - php
 
 volumes:
   vendor_data:
+  caddy_data:
+  caddy_config:

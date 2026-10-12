@@ -22,7 +22,7 @@ export default defineConfig({
   },
 
   build: {
-    // Nginx docroot. The `build` npm script clears ../public/assets and
+    // The web root. The `build` npm script clears ../public/assets and
     // ../public/index.html first; emptyOutDir must stay false so index.php and
     // the rest of the PHP docroot survive the build.
     outDir: '../public',
@@ -32,7 +32,7 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    // The dev server serves the UI; the API is the Compose stack's nginx.
+    // The dev server serves the UI; the API is the Compose stack's Caddy.
     proxy: {
       '/api': 'http://localhost:8080',
       '/cron': 'http://localhost:8080',

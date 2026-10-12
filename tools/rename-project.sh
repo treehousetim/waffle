@@ -13,7 +13,7 @@
 #   waffle              the slug: database names (waffle, waffle_test), the
 #                       Doppler project, /opt/waffle on the server
 #   Waffle              the name people read: page titles, the hello message
-#   waffle.example.com  the production hostname nginx's certificate is issued for
+#   waffle.example.com  the production hostname Caddy gets the certificate for
 #
 # then gives composer.json the project's own package name and description, and
 # turns README's backronym into a line saying the project is built on Waffle.

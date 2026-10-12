@@ -52,7 +52,7 @@ for file in $changed; do
         tests/Schema/*)      groups="$groups schema" ;;
 
         src/app/*|src/config/*|tests/*) groups="$groups core"; shared=1 ;;
-        # Config and scripts the core suite asserts by shape (NginxHeadersTest,
+        # Config and scripts the core suite asserts by shape (CaddyfileTest,
         # DeployScriptsTest, CreateProjectTest, ReleaseTest).
         tools/*|deploy/*|docker/*|docker-compose*.yml|composer.json|CHANGELOG.md)
             groups="$groups core" ;;

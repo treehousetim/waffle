@@ -10,7 +10,7 @@ use Psr\Http\Message\ResponseInterface;
 /**
  * Serves the built Vite shell for SPA deep links.
  *
- * Nginx sends every non-file request to index.php, so a GET for /settings
+ * Caddy sends every non-file request to index.php, so a GET for /settings
  * arrives here as a Slim 404 and is answered with index.html. The shell must
  * never be cached — Vite hashes the asset filenames it references, so a stale
  * shell points at assets that no longer exist.

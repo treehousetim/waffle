@@ -8,8 +8,9 @@ workplace to the app serving on its own hostname. `waffle` below is the slug
 
 - The production hostname, and where its DNS is managed.
 - The server: a single Digital Ocean droplet (Ubuntu LTS, 2 GB RAM is plenty
-  to start). IPv4 only unless nginx is given `[::]` listeners — an AAAA record
-  with nothing listening on it breaks Let's Encrypt, which prefers IPv6.
+  to start). IPv4 is enough. An AAAA record is only for a droplet with IPv6
+  turned on: one pointing anywhere else breaks Let's Encrypt, which tries IPv6
+  first (`deploy/check-dns.sh` refuses it).
 - Who the first owner is (an email address).
 
 ## Part A — Workstation
@@ -78,8 +79,10 @@ Read once, by the `CreateInitialOwner` migration on the first deploy.
 ## Part C — The server
 
 **7. Create the droplet** (Ubuntu LTS) with your own SSH key, and point an A
-record for `waffle.example.com` at it. Firewall: 22 from your addresses, 80 and
-443 from anywhere.
+record for `waffle.example.com` at it (or at a reserved IP assigned to it).
+Firewall: 22 from your addresses; 80, 443 and 443/udp from anywhere. Port 80
+stays open for good: Let's Encrypt validates over it, and Caddy redirects
+everything else on it to HTTPS.
 
 **8. Install what the deploy needs**, as root:
 
@@ -87,14 +90,15 @@ record for `waffle.example.com` at it. Firewall: 22 from your addresses, 80 and
   (https://docs.docker.com/engine/install/ubuntu/). Compose **v2.24 or later**
   is required: `docker-compose.prod.yml` uses `!override`.
 - The Doppler CLI (https://docs.doppler.com/docs/install-cli).
-- `certbot`, `curl` and `rsync` from Ubuntu's own repositories.
+- `curl`, `rsync` and `bind9-dnsutils` (for `dig`, which the deploy's DNS check
+  uses) from Ubuntu's own repositories. No certbot: Caddy handles the certificate.
 
 Then the deploy user and the directories:
 
 ```bash
 adduser --disabled-password --gecos '' deploy
 usermod -aG docker deploy
-mkdir -p /opt/waffle /var/www/certbot && chown deploy:deploy /opt/waffle
+mkdir -p /opt/waffle && chown deploy:deploy /opt/waffle
 ```
 
 Install a **deploy key** for the `deploy` user: a new ed25519 keypair made on
@@ -112,36 +116,28 @@ doppler configure set token dp.st.prd.XXXX --scope /opt/waffle
 cd /opt/waffle && doppler secrets --only-names      # must list the prd keys
 ```
 
-**10. The first certificate.** nginx will not start without the certificate
-`docker/nginx/production.conf` names, so the first one is issued standalone,
-with nothing on port 80 yet:
+**10. HTTPS: nothing to install.** Caddy gets the certificate for the hostname
+in `docker-compose.prod.yml`'s `SITE_ADDRESS` on the first deploy, and renews
+it on its own from then on (docs/https.md). It needs two things, and the deploy
+checks both:
 
-```bash
-dig +short waffle.example.com                 # must answer the droplet's address first
-certbot certonly --standalone -d waffle.example.com -m you@example.com --agree-tos -n
-```
+- **DNS points here.** Before anything starts, `deploy.sh` asks a public
+  resolver where `waffle.example.com` leads and stops with what to fix if it is
+  not this droplet. Check it yourself any time, on the server:
 
-Renewals afterwards should go through the webroot, with no downtime: nginx
-already serves `/.well-known/acme-challenge/` from `/var/www/certbot`, which
-`docker-compose.prod.yml` mounts. Switch the renewal over by editing
-`/etc/letsencrypt/renewal/waffle.example.com.conf` so that `[renewalparams]` has
-`authenticator = webroot` and `webroot_path = /var/www/certbot,` and a
-`[[webroot_map]]` section maps `waffle.example.com = /var/www/certbot`. Then add
-a deploy hook that reloads nginx when a certificate changes,
-`/etc/letsencrypt/renewal-hooks/deploy/reload-nginx`, executable:
+  ```bash
+  bash /opt/waffle/deploy/check-dns.sh waffle.example.com
+  ```
 
-```bash
-#!/bin/sh
-docker compose -f /opt/waffle/docker-compose.yml -f /opt/waffle/docker-compose.prod.yml exec -T nginx nginx -s reload
-```
+  Behind a proxy such as Cloudflare, whose addresses are not the droplet's,
+  deploy with `SKIP_DNS_CHECK=1`.
+- **Ports 80 and 443 are open to everyone** (step 7). After the stack is up,
+  `deploy.sh` waits for HTTPS to answer with a valid certificate, and says
+  where to look if it does not.
 
-Prove renewal works **after the first deploy** (nginx has to be up to answer
-the challenge), and put a reminder somewhere to do it again: a renewal that
-fails silently lands ninety days later.
-
-```bash
-certbot renew --dry-run
-```
+The certificates live in the `caddy_data` Docker volume. Never
+`docker compose down -v` on this server: a wiped store means a new certificate
+on every deploy, until Let's Encrypt's rate limit locks the hostname out.
 
 **11. Optional: a heartbeat and a deploy alert.**
 
@@ -200,7 +196,10 @@ gh run watch
 | `this tree is not a complete release` | the runner's build did not land `vendor/` or `src/public/assets` |
 | `Doppler is installed but cannot read secrets` | step 9 skipped, not scoped to `/opt/waffle`, or not set as `deploy` |
 | `CRON_SECRET is not set in Doppler` | `prd` incomplete (step 5) |
-| `nginx is not serving after 60s` | no certificate (step 10), or `production.conf` names another host |
+| `has no A record` / `points at …, but this server is …` | DNS (step 7) is missing or wrong, or has not spread yet; fix it and release again |
+| `has an AAAA (IPv6) record … that is not this server` | remove the AAAA record, or turn on IPv6 for the droplet and point it there |
+| `Caddy cannot load docker/caddy/Caddyfile` | a Caddyfile change that does not parse; nothing was restarted |
+| `is not serving a valid certificate after …s` | ports 80/443 closed (step 7), DNS, or Let's Encrypt's rate limit; `logs --tail=80 caddy` says which |
 | rsync fails on the host key | server rebuilt; re-capture `DROPLET_SSH_KNOWN_HOSTS` |
 
 **17. Sign in** at `https://waffle.example.com` as `FIRST_USERNAME`, then delete

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Front controller. Nginx sends everything that is not a real file here.
+ * Front controller. Caddy sends everything that is not a real file here.
  *
  * The session is started before the container is built so that Delight\Auth
  * attaches to an existing session rather than configuring one itself.

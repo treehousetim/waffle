@@ -36,7 +36,7 @@ function renameFixture(): string
         <?php
         $message = 'Hello from Waffle.';
         $db = 'waffle_test';
-        $cert = '/etc/letsencrypt/live/waffle.example.com/fullchain.pem';
+        $site = 'waffle.example.com';
         PHP);
 
     return $dir;
@@ -110,7 +110,7 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
         ->and(file_get_contents($this->dir . '/sample.php'))
         ->toContain("'Hello from Acme Ops.'")
         ->toContain("'acme_test'")
-        ->toContain('/live/ops.acme.com/');
+        ->toContain("'ops.acme.com'");
 });
 
 it('gives the project its own package name and description (2)', function (): void {

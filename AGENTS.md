@@ -36,7 +36,7 @@ Use exactly these majors, latest patch at install time.
 | Env loading | `vlucas/phpdotenv` | ^5.7 (tests only read `.env.testing` with it; nothing else loads a file) |
 | Tests | Pest | `pestphp/pest` ^4 (brings PHPUnit 12) + `pestphp/pest-plugin-arch` ^4, dev only; `pcov` for coverage. Pest 5 / PHPUnit 13 exists; stay on 4 unless told otherwise. |
 | Database | MariaDB | 12.3 (`mariadb:12.3`) |
-| Web server | Nginx | 1.31 (`nginx:1.31`) |
+| Web server | Caddy | 2.11 (`caddy:2.11`) — replaced Nginx 1.31 on 2026-10-12: it obtains and renews the Let's Encrypt certificate itself, so launching on HTTPS needs no certbot, renewal hook or hard-coded certificate path (`docs/https.md`) |
 | Frontend | Vue 3 (Composition API, `<script setup>`) | 3.5 |
 | Router / state | Vue Router 5.3, Pinia 4.0 | |
 | Build | Vite 8, `@vitejs/plugin-vue` 6.0 | |
@@ -82,17 +82,16 @@ src/
     middleware.php        # body parsing, cross-site refusal, routing, error middleware
     routes.php            # the platform's routes; merges routes/<slice>.php
     routes/               # one file per feature slice
-  public/                 # Nginx docroot: index.php + built frontend (assets/ and index.html are gitignored)
+  public/                 # web root: index.php + built frontend (assets/ and index.html are gitignored)
   frontend/               # Vite project; `npm run build` empties ../public/assets and writes there
     src/{api,assets,components,router,stores,utils,views}/
     test/                 # node:test suite for pure modules (src/utils/)
 docker/
   php/Dockerfile          # php:8.5-fpm + pdo_mysql zip, composer copied from composer:2, ARG PHP_INI selects php.ini vs php.prod.ini
-  nginx/default.conf      # local
-  nginx/production.conf   # 80→443 redirect, /cron on loopback-only 8081, Let's Encrypt certs mounted read-only
-  nginx/security-headers.conf  # included in the server block and every location that sets a header
+  caddy/Caddyfile         # the web server, local and production: SITE_ADDRESS picks plain HTTP or automatic HTTPS; /cron on loopback-only 8081
 deploy/
   deploy.sh               # idempotent; runs on the server against a tree the runner rsync'd
+  check-dns.sh            # does the hostname point here? run by deploy.sh before anything starts
   crontab                 # template rendered by render-crontab.sh, installed by deploy.sh
   render-crontab.sh
 tools/
@@ -281,7 +280,7 @@ Because Delight\Auth touches headers and sessions, bootstrap disables session co
 - **Unit tests for every class in `Domain/`** — state machines for every allowed and forbidden edge, value objects for every way they refuse input — and for every repository or query class with real logic.
 - **Arch tests** in `tests/Arch/` using Pest's `arch()` API: `App\Domain` must not depend on `Slim\`, `Psr\Http\`, `PDO`, `App\Controllers`, `App\Libraries` or any vendor SDK namespace; `App\Models` must not depend on `Slim\`, `Psr\Http\` or `App\Controllers`; only `App\Libraries` may use a vendor SDK (the list in `ArchTest.php` — **add each new SDK's namespace the day you add it**); every controller extends `BaseController`; every class in `src/app` is `strict_types`; no `dd`, `dump`, `var_dump`, `print_r`, `die`, `exit` or `eval` anywhere in `src/app`.
 - **Wiring:** `tests/Unit/ContainerWiringTest.php` builds the *production* container and resolves every port, controller and repository through it, because the test container replaces ports and would otherwise hide a broken definition.
-- **Config that cannot be executed is asserted by shape:** `NginxHeadersTest` (every location that sets a header includes the security headers), `DeployScriptsTest` (every shell script parses; the crontab renders; it calls only routes that exist), `ReleaseTest` (the version has a changelog section).
+- **Config that cannot be executed is asserted by shape:** `CaddyfileTest` (security headers on every response, the routing order, caching, the cron port, the certificate volume), `DeployScriptsTest` (every shell script parses; the crontab renders; it calls only routes that exist; the DNS check refuses every bad record), `ReleaseTest` (the version has a changelog section).
 - **The frontend:** pure modules live in `src/frontend/src/utils/` with no imports, and each has a `test/<name>.test.js`. Anything that needs a browser belongs in an E2E test.
 - **Coverage is a ratchet at 100%.** An excluded line needs a `@codeCoverageIgnore` with a one-line reason beside it, and **the only accepted reason is that the branch is unreachable without external infrastructure.**
 
@@ -320,7 +319,7 @@ The runner refuses a tag that is not `vX.Y.Z`, checks out the release tag, build
 
 The rsync excludes `.env`, `.env.testing`, `tests/`, `phpunit.xml`, `src/app/phinx/seeds/`, `docker/data/`, `.deploy/`, `backups/` and `coverage/`. **`docker/data/` is the MariaDB data directory — `--delete` without that exclude is the whole database.** Excluded paths are not deleted by `--delete` (that would need `--delete-excluded`, deliberately absent).
 
-`deploy/deploy.sh <tag>` then runs on the server, and because the workflow rsync'd it first, the version executing is always the new one. It refuses to proceed unless `vendor/autoload.php` and `src/public/assets` are present; checks Doppler is reachable; rebuilds images only if a content hash of `docker/` differs from `.deploy/docker.sha`; `compose up -d`; waits for DB health and php-fpm; `phinx migrate -e production`; restarts `php` (clears OPcache) then `nginx`; proves nginx is serving; renders and installs `deploy/crontab`; and records the tag and hash **last**, so a failed deploy does not look like a success. Every Compose call is wrapped in `doppler run --`.
+`deploy/deploy.sh <tag>` then runs on the server, and because the workflow rsync'd it first, the version executing is always the new one. It refuses to proceed unless `vendor/autoload.php` and `src/public/assets` are present; checks Doppler is reachable; checks the hostname's DNS points here (`deploy/check-dns.sh`; a refusal on the first deploy, a warning after); validates the Caddyfile; rebuilds images only if a content hash of `docker/` differs from `.deploy/docker.sha`; `compose up -d`; waits for DB health and php-fpm; `phinx migrate -e production`; restarts `php` (clears OPcache); reloads Caddy; proves HTTPS is serving a valid certificate for the hostname; renders and installs `deploy/crontab`; and records the tag and hash **last**, so a failed deploy does not look like a success. Every Compose call is wrapped in `doppler run --`.
 
 Rollback is re-running the workflow for the older tag — there is no server-side checkout to revert to, and re-running re-runs the whole tested pipeline. Migrations are not rolled back, which is why they only ever expand.
 
@@ -333,9 +332,10 @@ Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://127.0.0.1:808
 - **Injected env DOES reach both PHP-FPM and `docker compose exec`.** The official `php:fpm` image sets `clear_env = no` in `/usr/local/etc/php-fpm.d/docker.conf`, so the container environment reaches FPM workers; and `exec` inherits the container environment, which is how `phinx migrate` sees the config.
 - **`vendor/` is a named volume (`vendor_data`) locally.** A `composer install` run on the host does not affect what the container sees, and the host's `vendor/` may look empty or stale. Run composer inside the container: `docker compose exec php composer require ...`. In production it is a plain bind mount of the rsync'd `vendor/`.
 - **Vite writes into `src/public`.** `outDir` is `../public` with `emptyOutDir: false`, and the `build` script first `rm -rf ../public/assets ../public/index.html`. Both are gitignored build output — never commit them, and never hand-edit them.
-- **Caching is asymmetric on purpose.** Nginx serves `/assets/` with `expires 1y` + `public, immutable` because Vite hashes filenames, but SPA routes and `index.html` are served `no-cache, no-store, must-revalidate`. If you ever let `index.html` be cached, clients pin themselves to a dead bundle.
-- **nginx `add_header` does not inherit into a location that sets its own.** Every location that sets a header must include `security-headers.conf`; `NginxHeadersTest` enforces it.
-- **`/cron` is served only on port 8081, which production publishes on the host's loopback address alone; ports 80 and 443 answer it with 404.** Not port 80: it is published to the world, and Docker's userland proxy can present an outside connection as coming from the bridge gateway, inside an IP allow list. And 404 rather than the 80→443 redirect, because `curl -sf` neither follows a redirect nor treats a 301 as failure, so a crontab pointing at port 80 would silently do nothing.
+- **Caching is asymmetric on purpose.** Caddy serves `/assets/` with `max-age=31536000, immutable` because Vite hashes filenames, but SPA routes and `index.html` are served `no-cache, no-store, must-revalidate`. If you ever let `index.html` be cached, clients pin themselves to a dead bundle.
+- **The Caddyfile's order is deliberate, and it is one `route`.** Outside a `route`, Caddy sorts directives by its own rules; inside, they run as written, and the security depends on the order (cron and dotfiles refused before anything can serve them). The security headers are `defer`red so PHP cannot overwrite them. `CaddyfileTest` asserts both.
+- **The `caddy_data` volume is the certificate store.** Never `docker compose down -v` in production and never move it into the tree: a wiped store means a new certificate on every deploy, and Let's Encrypt allows five duplicates a week before it locks the hostname out.
+- **`/cron` is served only on port 8081, which production publishes on the host's loopback address alone; the site answers it with 404.** Not port 80: it is published to the world, and Docker's userland proxy can present an outside connection as coming from the bridge gateway, inside an IP allow list. And never through the site's HTTP→HTTPS redirect, because `curl -sf` neither follows a redirect nor treats one as failure, so the job would silently do nothing.
 - **DDL inside a transaction-wrapped test silently breaks the rollback.** MariaDB auto-commits on DDL, so a `CREATE`/`ALTER`/`DROP` in a `Feature` or `Unit` test leaks state into every later test. DDL belongs in `tests/Schema`.
 - **Migrations land before the PHP restart.** Production runs OPcache with `validate_timestamps=0`, so the old code keeps serving until `deploy.sh` restarts php — for a few seconds the previous release runs against the new schema. Expand in one release, contract in the next.
 - **A migration that skips is still recorded.** `CreateInitialOwner` with `FIRST_*` empty prints "skipped" and phinx marks it run; deploying again does not retry it. Put the values in `prd` before the first release, or delete its `phinxlog` row and migrate again.

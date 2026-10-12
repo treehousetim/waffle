@@ -132,6 +132,51 @@ fi
 echo "    reachable"
 
 # ---------------------------------------------------------------------------
+# 3b. DNS, before anything starts (docs/https.md).
+#
+# Caddy can only get a certificate for a hostname whose DNS leads here. On the
+# first deploy there is no certificate yet, so a wrong record is a refusal:
+# better to stop with what to fix than to start a site that cannot serve HTTPS.
+# Afterwards it is a warning, because the site is already live and an
+# emergency fix should not wait on DNS. SKIP_DNS_CHECK=1 skips it for a
+# hostname behind a proxy such as Cloudflare, whose addresses are not ours.
+# ---------------------------------------------------------------------------
+SITE_HOST="$(sed -n 's/^ *SITE_ADDRESS: *//p' "$APP_DIR/docker-compose.prod.yml" | tr -d '"' | head -n 1)"
+
+if [ -z "$SITE_HOST" ]; then
+    echo "error: no SITE_ADDRESS in docker-compose.prod.yml; Caddy would not know its hostname." >&2
+    exit 1
+fi
+
+echo "==> checking DNS for ${SITE_HOST}"
+if [ "${SKIP_DNS_CHECK:-}" = "1" ]; then
+    echo "    skipped (SKIP_DNS_CHECK=1)"
+elif ! bash "$APP_DIR/deploy/check-dns.sh" "$SITE_HOST"; then
+    if [ -z "$PREV" ]; then
+        echo "error: refusing the first deploy until ${SITE_HOST} points here; Caddy cannot get a certificate otherwise." >&2
+        echo "       behind a proxy such as Cloudflare? Re-run with SKIP_DNS_CHECK=1." >&2
+        exit 1
+    fi
+    echo "warning: carrying on, because ${PREV} is already live; fix DNS before the certificate next renews." >&2
+fi
+
+# ---------------------------------------------------------------------------
+# 3c. Validate the Caddyfile before anything restarts.
+#
+# A Caddyfile Caddy cannot load would otherwise take the site down at the
+# restart below. `run --rm` starts a throwaway container with the same mounts
+# and environment, publishes no ports, and is gone when it answers.
+# ---------------------------------------------------------------------------
+echo "==> validating docker/caddy/Caddyfile"
+if ! "${COMPOSE[@]}" run --rm --no-deps -T caddy \
+        caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>"$STATE_DIR/caddy-validate.log"; then
+    cat "$STATE_DIR/caddy-validate.log" >&2
+    echo "error: Caddy cannot load docker/caddy/Caddyfile; nothing was restarted." >&2
+    exit 1
+fi
+echo "    valid"
+
+# ---------------------------------------------------------------------------
 # 4. Rebuild images only when docker/ actually changed.
 #
 # With no git here, the change check is a content hash of docker/ recorded at
@@ -148,7 +193,8 @@ echo "    reachable"
 #   - its contents change on every write, so the hash would differ on every run
 #     and `compose build` would fire every single deploy
 #
-# Only the image inputs matter here: docker/php and docker/nginx.
+# Only the image inputs matter here: docker/php, and docker/caddy (whose
+# Caddyfile is mounted, not built in, but costs nothing to include).
 #
 # -prune, not -not -path: a filter still descends into the directory to evaluate
 # the test, so it hits the same EACCES and still exits non-zero. -prune stops
@@ -264,67 +310,44 @@ echo "==> running migrations"
 echo "==> restarting php (clears opcache)"
 "${COMPOSE[@]}" restart php
 
-# Do not call the deploy done while php-fpm is still starting: nginx would
+# Do not call the deploy done while php-fpm is still starting: Caddy would
 # answer 502 for however long that takes.
 wait_for_php
 
-echo "==> restarting nginx"
-"${COMPOSE[@]}" restart nginx
+# A graceful reload picks up a changed Caddyfile without dropping a connection.
+# `up -d` already recreated the container if its image or mounts changed.
+echo "==> reloading Caddy"
+"${COMPOSE[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 
 # ---------------------------------------------------------------------------
-# 9b. Prove nginx is actually serving.
+# 9b. Prove the site is serving HTTPS with a valid certificate.
 #
-# Without this the script reports a successful deploy while the site is down.
-# The failure mode is real and quiet: nginx refuses to start if the certificate
-# named in docker/nginx/production.conf is missing or unreadable, and
-# docker-compose.prod.yml sets `restart: unless-stopped`, so the container sits
-# in a crashloop rather than exiting visibly.
-#
-# Checked from the host, not with `compose exec`: the nginx image ships no wget,
-# curl or nc, so there is nothing inside the container to make a request with.
-# The prod overlay publishes port 80, so 127.0.0.1 on the host reaches it without
-# depending on the cloud firewall or on DNS.
-#
-# Two checks, because they fail differently: `docker inspect` catches the
-# crashloop (the container restarts forever and never serves), and the request
-# catches a container that is up but rejecting connections.
+# Checked from the host, against 127.0.0.1 but with the real hostname (so the
+# certificate is verified for it), which leaves out the cloud firewall and DNS
+# caching. The first deploy waits longer: that is when Caddy is getting the
+# certificate, which takes seconds when DNS and the firewall are right.
 # ---------------------------------------------------------------------------
-echo "==> verifying nginx is serving"
-NGINX_WAIT_SECONDS=60
+echo "==> verifying https://${SITE_HOST} is serving"
+HTTPS_WAIT_SECONDS=60
+[ -z "$PREV" ] && HTTPS_WAIT_SECONDS=180
 waited=0
 
-nginx_cid() { "${COMPOSE[@]}" ps -q nginx 2>/dev/null || true; }
-
-while :; do
-    CID="$(nginx_cid)"
-
-    if [ -n "$CID" ]; then
-        STATE="$(docker inspect -f '{{.State.Status}}' "$CID" 2>/dev/null || echo unknown)"
-
-        # A 301 to https is the expected answer on port 80; --fail is deliberately
-        # NOT used, since any HTTP response proves nginx parsed its config and is
-        # accepting connections.
-        if [ "$STATE" = "running" ] \
-           && curl -s -o /dev/null --max-time 5 http://127.0.0.1/ 2>/dev/null
-        then
-            break
-        fi
-    fi
-
-    if [ "$waited" -ge "$NGINX_WAIT_SECONDS" ]; then
-        echo "error: nginx is not serving after ${NGINX_WAIT_SECONDS}s (state: ${STATE:-no container})." >&2
-        echo "       The usual cause is a missing or unreadable certificate for the host" >&2
-        echo "       named in docker/nginx/production.conf, which makes nginx refuse to" >&2
-        echo "       start; restart: unless-stopped then hides it as a crashloop." >&2
-        echo "       Check both:" >&2
-        echo "         ${COMPOSE[*]} logs --tail=50 nginx" >&2
-        echo "         ls -l /etc/letsencrypt/live/" >&2
+while ! curl -s -o /dev/null --max-time 10 --resolve "${SITE_HOST}:443:127.0.0.1" "https://${SITE_HOST}/" 2>/dev/null; do
+    if [ "$waited" -ge "$HTTPS_WAIT_SECONDS" ]; then
+        CID="$("${COMPOSE[@]}" ps -q caddy 2>/dev/null || true)"
+        STATE="$( [ -n "$CID" ] && docker inspect -f '{{.State.Status}}' "$CID" 2>/dev/null || echo "no container")"
+        echo "error: https://${SITE_HOST} is not serving a valid certificate after ${HTTPS_WAIT_SECONDS}s (caddy: ${STATE})." >&2
+        echo "       The usual causes, in order:" >&2
+        echo "         - DNS: bash deploy/check-dns.sh ${SITE_HOST}" >&2
+        echo "         - the firewall: ports 80 and 443 must be open to everyone; Let's Encrypt checks from outside" >&2
+        echo "         - Let's Encrypt's rate limit, if the certificate store was wiped repeatedly" >&2
+        echo "       Caddy says why: ${COMPOSE[*]} logs --tail=80 caddy" >&2
         exit 1
     fi
-    sleep 3
-    waited=$((waited + 3))
+    sleep 5
+    waited=$((waited + 5))
 done
-echo "    nginx serving after ${waited}s"
+echo "    serving after ${waited}s"
 
 # ---------------------------------------------------------------------------
 # 10. Render and install the crontab.

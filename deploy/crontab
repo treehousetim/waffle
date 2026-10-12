@@ -11,8 +11,8 @@
 # line: a command line is readable by every process on the server through ps,
 # for as long as the curl runs.
 #
-# Cron is served on 127.0.0.1:8081 only (docker/nginx/production.conf); port
-# 80 answers /cron with 404 and 443 never serves it.
+# Cron is served on 127.0.0.1:8081 only (docker/caddy/Caddyfile); the public
+# site answers /cron with 404.
 #
 # Every /cron endpoint is idempotent and is rejected with 403 unless the
 # X-Cron-Secret header matches CRON_SECRET, so a missed run is harmless and an

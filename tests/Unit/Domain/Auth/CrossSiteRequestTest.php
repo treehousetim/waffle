@@ -103,7 +103,7 @@ it('leaves Secure off when the request is not over TLS', function (): void {
     /*
      * Local development is plain HTTP on a loopback port, and a Secure cookie
      * there is never sent back -- a login that appears to succeed and then
-     * does nothing. Production nginx sets `fastcgi_param HTTPS on`, which is
+     * does nothing. Production Caddy passes `HTTPS=on` over TLS, which is
      * the signal this reads.
      */
     expect(SessionCookie::params(false)['secure'])->toBeFalse()

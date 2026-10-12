@@ -22,7 +22,7 @@ final readonly class SessionCookie
      * @return array{lifetime:int,path:string,domain:string,secure:bool,httponly:bool,samesite:string}
      *
      * @param bool $overHttps whether this request arrived over TLS. Production
-     *        nginx sets `fastcgi_param HTTPS on`; local development is plain
+     *        Caddy passes `HTTPS=on` to PHP over TLS; local development is plain
      *        HTTP on a loopback port, and a `Secure` cookie there would simply
      *        never be sent back — a login that silently does nothing.
      */
@@ -55,7 +55,7 @@ final readonly class SessionCookie
     /**
      * Whether this request arrived over TLS, from the CGI environment.
      *
-     * Reads `HTTPS`, which production nginx sets explicitly as a FastCGI
+     * Reads `HTTPS`, which Caddy's php_fastcgi sets on a TLS request as a FastCGI
      * parameter, and falls back to the forwarded-proto header for the case
      * where something else terminates TLS. Not a PSR-7 request, because this is
      * answered before the container — and therefore Slim — exists.
