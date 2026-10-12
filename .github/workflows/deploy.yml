@@ -78,10 +78,15 @@ jobs:
           cache: npm
           cache-dependency-path: src/frontend/package-lock.json
 
+      # npm ci installs exactly the lockfile, checking every package against its
+      # recorded hash, with install scripts off (src/frontend/.npmrc). Then the
+      # registry signatures are verified, before anything is built from them
+      # (docs/supply-chain.md).
       - name: Build the frontend
         working-directory: src/frontend
         run: |
           npm ci
+          npm audit signatures
           npm run build
 
       # -------------------------------------------------------------------

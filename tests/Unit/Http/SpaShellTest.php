@@ -30,5 +30,5 @@ it('explains how to build the frontend when it has not been built', function ():
     expect($shell->isBuilt())->toBeFalse()
         ->and($response->getStatusCode())->toBe(503)
         ->and($response->getHeaderLine('Content-Type'))->toBe('text/plain; charset=utf-8')
-        ->and((string) $response->getBody())->toContain('npm run build');
+        ->and((string) $response->getBody())->toContain('./tools/npm.sh run build');
 });

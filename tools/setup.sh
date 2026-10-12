@@ -13,9 +13,10 @@
 #   1. checks the platform and the tools the project needs
 #   2. asks for the slug, display name and production hostname, and renames the
 #      project with tools/rename-project.sh (which validates them)
-#   3. refreshes the npm and composer lock files, which both name the project,
-#      using the tools on this machine or a throwaway Docker container — it
-#      never starts the project's own stack
+#   3. refreshes composer.lock, whose hash covers the project name, using
+#      composer on this machine or a throwaway container (it never starts the
+#      project's stack). The npm lockfile needs nothing: the rename rewrites the
+#      name in it, and npm itself only ever runs through tools/npm.sh
 #   4. offers to create the git repository and make the first commit
 #   5. says what to do next
 #
@@ -217,10 +218,7 @@ if has git; then ok "git $(git --version | sed 's/^git version //')"; else
     install_hint "xcode-select --install" "sudo apt install git   (or your distribution's package manager)"
 fi
 
-if has npm; then ok "npm $(npm --version 2>/dev/null || true)"; else
-    warn "npm not found (needed for npm run build; Node 26 LTS)"
-    install_hint "brew install node@26" "https://nodejs.org/en/download"
-fi
+# Node is not needed here: tools/npm.sh runs npm in a container (docs/supply-chain.md).
 
 if has doppler; then ok "Doppler CLI $(doppler --version 2>/dev/null || true)"; else
     warn "Doppler CLI not found (optional locally, required to deploy)"
@@ -282,27 +280,17 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Lock files. Both name the project, so a rename leaves them stale.
+# 3. composer.lock. Its content hash covers the project's name, so a rename
+#    leaves it stale. (package-lock.json only carries the name, which the
+#    rename has already rewritten.)
 # ---------------------------------------------------------------------------
-step "Refreshing the lock files"
+step "Refreshing composer.lock"
 
 if [ "$SKIP_LOCKS" -eq 1 ]; then
-    warn "skipped (--skip-locks). Later: (cd src/frontend && npm install --package-lock-only) and composer update --lock"
+    warn "skipped (--skip-locks). Later: composer update --lock"
 elif [ "${RENAMED:-0}" -eq 0 ]; then
     ok "nothing renamed, nothing to refresh"
 else
-    NPM_LATER="(cd src/frontend && npm install --package-lock-only)"
-    if has npm; then
-        lock "src/frontend/package-lock.json (npm on this machine)" "$NPM_LATER" \
-            npm --prefix src/frontend install --package-lock-only --ignore-scripts --no-audit --no-fund
-    elif has docker; then
-        lock "src/frontend/package-lock.json (throwaway node:26 container)" "$NPM_LATER" \
-            docker run --rm -v "$ROOT/src/frontend:/app" -w /app node:26-alpine \
-            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-    else
-        warn "package-lock.json not refreshed: needs npm or Docker. Later: $NPM_LATER"
-    fi
-
     COMPOSER_LATER="composer update --lock"
     if has composer; then
         lock "composer.lock (composer on this machine)" "$COMPOSER_LATER" \
@@ -359,7 +347,7 @@ cat <<EOF
        docker compose up -d
        docker compose exec php vendor/bin/phinx migrate -e development
        docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
-       (cd src/frontend && npm ci && npm run build)
+       ./tools/npm.sh ci && ./tools/npm.sh run build
      then http://localhost:8080 (README.md, "First run").
   3. Before your first deploy: sign up for the services in README.md, then
      follow docs/fresh-install.md.

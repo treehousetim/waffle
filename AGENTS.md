@@ -17,7 +17,7 @@ This is the instruction file for anyone (human or AI agent) working in this repo
 
 Phase status:
 
-- **Phase 1 — skeleton. Done.** The whole stack runs end to end: `./tools/setup.sh` once (or `composer create-project treehousetim/waffle <dir>`, which runs it), `docker compose up -d`, `phinx migrate`, `phinx seed:run -s UserSeeder`, `npm run build`, then sign in at `http://localhost:8080` as the seeded owner and see the hello page. `./tools/test.sh --coverage` is green at 100%: feature tests for login/logout/me and the hello route (including the 401/403 paths), the access grid walked for every route and level, unit tests for the middleware and `BaseController`, a `Schema` test proving DDL isolation, the arch suite, an E2E journey that writes a repeatable artifact, and the frontend's Node suite. **Settings** ships as the worked example of a feature slice (`docs/settings.md`).
+- **Phase 1 — skeleton. Done.** The whole stack runs end to end: `./tools/setup.sh` once (or `composer create-project treehousetim/waffle <dir>`, which runs it), `docker compose up -d`, `phinx migrate`, `phinx seed:run -s UserSeeder`, `./tools/npm.sh run build`, then sign in at `http://localhost:8080` as the seeded owner and see the hello page. `./tools/test.sh --coverage` is green at 100%: feature tests for login/logout/me and the hello route (including the 401/403 paths), the access grid walked for every route and level, unit tests for the middleware and `BaseController`, a `Schema` test proving DDL isolation, the arch suite, an E2E journey that writes a repeatable artifact, and the frontend's Node suite. **Settings** ships as the worked example of a feature slice (`docs/settings.md`).
 - **Phase 2 — the first real feature.** Write its failure list first (`docs/adding-a-feature.md`), then its tests, then its code, as a slice. Every item ships with its tests in the same change. Do not start a feature that the skeleton cannot run.
 
 ### First session in a new project
@@ -53,7 +53,7 @@ Use exactly these majors, latest patch at install time.
 | Build | Vite 8, `@vitejs/plugin-vue` 6.0 | |
 | HTTP client (JS) | Axios | 1.20 |
 | Frontend tests | Node's built-in `node:test`, run in a `node:26-alpine` container by `tools/test.sh` | |
-| Node | 26 LTS | |
+| Node | 26 LTS | run only through `tools/npm.sh`, in `node:26-alpine`; not needed on the host (`docs/supply-chain.md`) |
 | Secrets | Doppler CLI | 3.76 — the **only** source of secrets, local and production |
 | Runtime | Docker Compose | |
 | Hosting | A single Digital Ocean droplet, deployed by GitHub Actions on `release: published` | |
@@ -95,7 +95,7 @@ src/
     routes.php            # the platform's routes; merges routes/<slice>.php
     routes/               # one file per feature slice
   public/                 # web root: index.php + built frontend (assets/ and index.html are gitignored)
-  frontend/               # Vite project; `npm run build` empties ../public/assets and writes there
+  frontend/               # Vite project; `./tools/npm.sh run build` empties ../public/assets and writes there; .npmrc turns install scripts off
     src/{api,assets,components,router,stores,utils,views}/
     test/                 # node:test suite for pure modules (src/utils/)
 docker/
@@ -108,6 +108,7 @@ deploy/
   render-crontab.sh
 tools/
   test.sh                 # the only way tests are run
+  npm.sh                  # the only way npm is run: in a container, no install scripts, nothing younger than a week
   release.sh              # the release: version, changelog, gate, tag, push, GitHub release
   changed-groups.sh       # maps changed paths to test groups, for --changed
   backup-prod-db.sh       # nightly dump on the server, keeps 14
@@ -328,7 +329,7 @@ Doppler is the **only** source of secrets. Today only production has any; local 
 
 What the pipeline does. `.github/workflows/deploy.yml` fires on `release: published` and runs against the **`prod` GitHub environment**, which carries a `v*` tag policy — a release cut from any other ref is blocked before the job starts. Every action is pinned to a commit, not a tag.
 
-The runner refuses a tag that is not `vN`, checks out the release tag, builds the frontend (`npm ci && npm run build`) **and** `vendor/` (`composer install --no-dev --optimize-autoloader`), verifies both landed, then **rsyncs the tree** to `/opt/<slug>` with `--delete`.
+The runner refuses a tag that is not `vN`, checks out the release tag, builds the frontend (installing exactly the lockfile, verifying its registry signatures, then building) **and** `vendor/` (`composer install --no-dev --optimize-autoloader`), verifies both landed, then **rsyncs the tree** to `/opt/<slug>` with `--delete`.
 
 **Nothing is cloned on the server.** There is no git checkout, no deploy key, and no composer in production. A clone would put a source-read credential on the same box as every production secret, and two independent fetches of one tag are two artifacts that merely ought to agree. One rsync of one tested tree removes that.
 
@@ -355,6 +356,7 @@ Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://127.0.0.1:808
 - **Migrations land before the PHP restart.** Production runs OPcache with `validate_timestamps=0`, so the old code keeps serving until `deploy.sh` restarts php — for a few seconds the previous release runs against the new schema. Expand in one release, contract in the next.
 - **A migration that skips is still recorded.** `CreateInitialOwner` with `FIRST_*` empty prints "skipped" and phinx marks it run; deploying again does not retry it. Put the values in `prod-serve` before the first release, or delete its `phinxlog` row and migrate again.
 - **PHP errors go to the log, not the response.** `display_errors` is off in both ini files: the API speaks JSON, and output before the headers stops the session cookie being reissued at sign-in. Read them with `docker compose logs php`. Uncaught exceptions still appear in the JSON error when `APP_DEBUG` is on.
+- **npm runs only through `./tools/npm.sh`** (`docs/supply-chain.md`). It runs npm in a throwaway container with only the repository mounted, keeps `node_modules` in a Docker volume (so it is not on disk, and editors will not find it there), turns install scripts off, and adds `--before=<7 days ago>` to anything that picks versions, because a hijacked release is usually pulled within days. `NPM_COOLDOWN_DAYS=0` is for a fix that cannot wait, and says so. Never run `npm` or `npx` directly, and never tell anyone to: `NpmTest` fails on a document or script that does.
 - **Delight\Auth raises PHP 8.5 deprecations** for implicitly nullable parameters. `tests/bootstrap.php` compiles those classes before PHPUnit's handler is installed and `phpunit.xml` ignores indirect deprecations, so the suite stays strict about ours.
 - **Login throttling is off in tests only** (`APP_ENV=testing`). `DelightIdentityTest` builds a throttling instance to prove the 429 path.
 

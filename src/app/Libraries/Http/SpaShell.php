@@ -33,7 +33,7 @@ final readonly class SpaShell
         if (!$this->isBuilt()) {
             $response = $this->responseFactory->createResponse(503);
             $response->getBody()->write(
-                'The frontend has not been built. Run: cd src/frontend && npm ci && npm run build'
+                'The frontend has not been built. Run: ./tools/npm.sh ci && ./tools/npm.sh run build'
             );
 
             return $response->withHeader('Content-Type', 'text/plain; charset=utf-8');

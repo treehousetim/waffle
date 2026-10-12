@@ -153,8 +153,7 @@ echo "  started VERSION at 0 and a fresh CHANGELOG.md"
 
 echo
 echo "Done. Next:"
-echo "  - refresh the lock files (both name the project):"
-echo "      (cd src/frontend && npm install --package-lock-only)"
-echo "      docker compose up -d && docker compose exec php composer update --lock"
+echo "  - refresh composer.lock, whose hash covers the project name:"
+echo "      composer update --lock   (or ./tools/setup.sh, which does it for you)"
 echo "  - create the Doppler project '${SLUG}' with configs prod-serve and prod-deploy (docs/fresh-install.md)"
 echo "  - read AGENTS.md, then fill in section 1 with what you are building"

@@ -1,7 +1,8 @@
 # PHP dependencies — installed by composer inside the php container.
 /vendor/
 
-# Node dependencies — installed by `npm ci` in src/frontend.
+# Node dependencies. tools/npm.sh keeps them in a Docker volume, not here; the
+# ignore stays for CI, which installs on the runner.
 node_modules/
 
 # Secrets. There is no .env: production secrets are injected by `doppler run --`. The

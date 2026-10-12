@@ -40,10 +40,12 @@ Native Windows shells (Git Bash, MSYS2, Cygwin) are refused with a pointer to
 WSL2: the stack needs a real Linux or macOS userland, and a half-working
 rename is worse than none.
 
-The lock files are refreshed with `npm` and `composer` if they are installed,
-otherwise with throwaway `node:26-alpine` and `composer:2` containers; neither
-starts the project's own stack. With neither tool nor Docker, the step is
-skipped with the commands to run later.
+`composer.lock` is refreshed (its hash covers the project name) with
+`composer` if it is installed, otherwise a throwaway `composer:2` container;
+neither starts the project's stack. With neither, the step is skipped with
+the command to run later. `package-lock.json` needs no refresh: the rename
+rewrites the name in it, and npm only ever runs through `tools/npm.sh`
+(docs/supply-chain.md).
 
 ## What the script replaces
 

@@ -17,6 +17,7 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
 | [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
 | [docs/settings.md](docs/settings.md) | Adding a setting, or wanting a worked example of a slice | The settings table, the Settings page, and how to add a setting. |
+| [docs/supply-chain.md](docs/supply-chain.md) | Adding or updating a frontend package | How npm is kept from hijacked releases: the week-long cooldown, no install scripts, the container, signature checks. |
 | [docs/releasing.md](docs/releasing.md) | Cutting a release | `./tools/release.sh`, how versions work for the framework and for an app, and its failure list. |
 | [CHANGELOG.md](CHANGELOG.md) | Cutting a release, or catching up | What changed in each release, and what is waiting under `[Unreleased]`. |
 | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) | The brief is silent on something | Decisions not yet made. Answered ones move to [RESOLVED_QUESTIONS.md](RESOLVED_QUESTIONS.md). |
@@ -33,9 +34,9 @@ composer create-project treehousetim/waffle acme
 
 Composer copies [Waffle](https://github.com/treehousetim/waffle) into `acme/` and runs the guided setup, `tools/setup.sh`. It:
 
-1. checks your machine for Docker, Compose, git, npm and the Doppler CLI, and says how to install anything missing;
+1. checks your machine for Docker, Compose, git and the Doppler CLI, and says how to install anything missing (Node is not needed: npm runs in a container);
 2. asks for a **slug** (database names, the Doppler project, `/opt/<slug>` on the server), a **display name**, and the **production hostname**, suggesting each from the directory name — press enter to take a suggestion;
-3. renames the project, then refreshes both lock files with the tools on your machine or a throwaway Docker container, without starting the project;
+3. renames the project, then refreshes `composer.lock` with composer or a throwaway Docker container, without starting the project;
 4. offers to create the git repository and make the first commit;
 5. prints what to do next.
 
@@ -80,7 +81,6 @@ Optional:
 ## Prerequisites
 
 - Docker (with Docker Compose v2.24 or later)
-- Node 26 LTS (for `npm run build` and `npm run dev` on the host; the test runner uses its own Node container)
 - Doppler CLI 3.76, to deploy (not needed locally)
 - `gh` (GitHub CLI), for cutting releases
 
@@ -99,8 +99,9 @@ docker compose exec php vendor/bin/phinx migrate -e development
 #      owner@example.test   admin@example.test   user@example.test
 docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
 
-# 4. Build the frontend into src/public.
-(cd src/frontend && npm ci && npm run build)
+# 4. Build the frontend into src/public. npm runs in a container (docs/supply-chain.md):
+#    Node need not be installed, and no package can reach your home directory.
+./tools/npm.sh ci && ./tools/npm.sh run build
 ```
 
 Open <http://localhost:8080> and sign in as `owner@example.test` with the password the seeder printed (`local-dev-password` unless you set `SEED_PASSWORD`).
@@ -135,11 +136,12 @@ Tests read `.env.testing` only and never touch Doppler. End-to-end tests write t
 ## Frontend dev loop
 
 ```bash
-cd src/frontend
-npm run dev
+./tools/npm.sh run dev
 ```
 
-The dev server runs on 5173 and proxies `/api`, `/cron` and `/webhooks` to `http://localhost:8080`, so use 5173 while working on the UI and 8080 to check the built bundle. `npm run build` empties `../public/assets` and `../public/index.html` and writes the hashed bundle there; both are gitignored build output.
+The dev server runs on 5173 and proxies `/api`, `/cron` and `/webhooks` to the stack on 8080, so use 5173 while working on the UI and 8080 to check the built bundle. `./tools/npm.sh run build` empties `src/public/assets` and `src/public/index.html` and writes the hashed bundle there; both are gitignored build output.
+
+`./tools/npm.sh` is the only way npm is run: in a throwaway container, with install scripts off, and taking only versions at least a week old, because hijacked releases are usually caught within days. [docs/supply-chain.md](docs/supply-chain.md) explains each layer.
 
 ## Going to production
 

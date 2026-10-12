@@ -39,11 +39,14 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    // The dev server serves the UI; the API is the Compose stack's Caddy.
+    // tools/npm.sh runs the dev server in a container: it listens on all of the
+    // container's interfaces (published to 127.0.0.1 only) and reaches the
+    // stack's Caddy through host.docker.internal. Outside one, the defaults.
+    host: process.env.VITE_DEV_HOST || 'localhost',
     proxy: {
-      '/api': 'http://localhost:8080',
-      '/cron': 'http://localhost:8080',
-      '/webhooks': 'http://localhost:8080'
+      '/api': process.env.VITE_API_TARGET || 'http://localhost:8080',
+      '/cron': process.env.VITE_API_TARGET || 'http://localhost:8080',
+      '/webhooks': process.env.VITE_API_TARGET || 'http://localhost:8080'
     }
   }
 })
