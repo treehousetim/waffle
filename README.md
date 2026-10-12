@@ -2,6 +2,21 @@
 
 **W**affle **A**pplication **F**ramework **F**or **L**azy **E**ngineers.
 
+## What this is, and who it's for
+
+This starter was written by AI (Claude, in Claude Code) under human direction, and it is meant to be built on the same way: you describe what you want, an AI coding agent writes it, and the guard rails here keep the result safe to put online.
+
+It is for people with some engineering skill who want their own custom website: comfortable in a terminal, able to read code and judge whether an answer makes sense, but not necessarily working as developers. You bring the idea and the judgement, the agent does the typing, and this project supplies the parts that are easy to get wrong:
+
+- **Instructions the agent follows.** [AGENTS.md](AGENTS.md) is written for AI agents as much as for people. It fixes the stack, the structure and the rules, and tells an agent how to start a new project: name it, interview you about what you are building, and plan the first feature before writing any code.
+- **Tests the agent has to pass.** Every change ships with tests, coverage must stay at 100%, and architecture rules fail the build, so an agent's mistakes show up as failing tests rather than on your live site.
+- **Scripts instead of procedures.** Setup, GitHub, releases and dependency updates are single commands with their checks built in, so neither you nor the agent has to follow a long procedure correctly by hand.
+- **Safe defaults for going live.** Automatic HTTPS, secrets kept out of the code, new package releases held back a week in case they were hijacked, and a one-command deploy to a server you own.
+
+**Read what the agent writes.** AI makes confident mistakes. The tests catch many of them, not all, and you are responsible for what you deploy.
+
+**Status: early.** No release has been tagged yet, and the full test suite has not yet been run end to end.
+
 A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 behind Caddy (automatic HTTPS), MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server deployed by GitHub Actions — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
 
 What runs today: sign in, sign out, three access levels behind one permission grid, a hello page, and a Settings page as the worked example of a feature slice.
