@@ -72,10 +72,14 @@ final readonly class CrossSiteRequest
      * another origin without asking first; the frontend only ever sends
      * JSON, so refusing them means any cross-origin write needs a preflight,
      * which the app never grants. Webhooks are outside /api and keep their forms.
+     *
+     * The path is percent-decoded first because the router decodes it before
+     * matching: `/%61pi/auth/login` reaches the login route, so it must be
+     * judged as `/api/auth/login` here too.
      */
     public static function isFormBody(string $method, string $path, string $contentType): bool
     {
-        if (in_array(strtoupper($method), self::SAFE, true) || !str_starts_with($path, '/api/')) {
+        if (in_array(strtoupper($method), self::SAFE, true) || !str_starts_with(rawurldecode($path), '/api/')) {
             return false;
         }
 

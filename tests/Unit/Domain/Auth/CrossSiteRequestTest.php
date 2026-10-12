@@ -127,3 +127,14 @@ it('refuses on /api the bodies a plain HTML form can send, so every write needs 
         // Many webhook senders post form-encoded, server to server.
         ->and(CrossSiteRequest::isFormBody('POST', '/webhooks/example', 'application/x-www-form-urlencoded'))->toBeFalse();
 });
+
+it('decodes the path before deciding it is outside /api, as the router does', function (): void {
+    /*
+     * Slim percent-decodes the path before routing, so /%61pi/auth/login is
+     * /api/auth/login by the time a route runs. Checking the raw path would let
+     * a form body through to it.
+     */
+    expect(CrossSiteRequest::isFormBody('POST', '/%61pi/auth/login', 'application/x-www-form-urlencoded'))->toBeTrue()
+        ->and(CrossSiteRequest::isFormBody('POST', '/%61%70%69/settings', 'text/plain'))->toBeTrue()
+        ->and(CrossSiteRequest::isFormBody('POST', '/%77ebhooks/example', 'application/x-www-form-urlencoded'))->toBeFalse();
+});

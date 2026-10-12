@@ -94,12 +94,15 @@ final readonly class DelightIdentity implements IdentityPort
         /*
          * Delight reads `status` and does not act on it.
          *
-         * It fetches the column, exposes isSuspended(), and leaves the policy
-         * to the application -- so without this an account that had been
-         * turned off would go on signing in perfectly happily. The session has
-         * already been created by this point, so it is torn down first.
+         * It fetches the column, exposes isNormal() and friends, and leaves the
+         * policy to the application -- so without this an account that had
+         * been turned off would go on signing in perfectly happily. Anything
+         * but normal is refused, matching AuthMiddleware's rule (status 0):
+         * isSuspended() alone would let a banned or locked account through.
+         * The session has already been created by this point, so it is torn
+         * down first.
          */
-        if ($this->auth->isSuspended()) {
+        if (!$this->auth->isNormal()) {
             $this->logout();
 
             throw AccountDisabled::byOwner();

@@ -100,7 +100,7 @@ tests/Support/Overrides/<slice>.php  # each of its ports bound to its throwing f
 ./tools/test.sh --coverage          # before committing: 100%, everything
 ```
 
-Then: the entity in AGENTS.md §4, the doc linked from `docs/README.md`, a line
+Then: the entity in AGENTS.md §4, the doc linked from the README's Documentation table, a line
 under `[Unreleased]` in `CHANGELOG.md`, and any new config key in
 `docker-compose.yml`'s `php` environment, `src/config/container.php`,
 `.env.testing` (a dummy) and Doppler.

@@ -6,21 +6,58 @@ A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 beh
 
 What runs today: sign in, sign out, three access levels behind one permission grid, a hello page, and a Settings page as the worked example of a feature slice.
 
-Conventions, layering rules, testing rules and the release flow live in [AGENTS.md](AGENTS.md). Read that before writing code. The rest of the documentation starts at [docs/README.md](docs/README.md).
+## Documentation
+
+| Document | Read it when | What it covers |
+| --- | --- | --- |
+| [AGENTS.md](AGENTS.md) | Before writing any code | The rulebook: stack, layout, layering rules, SQL conventions, testing rules, secrets, the release flow. Written to be enough on its own, for people and AI agents alike. |
+| [docs/create-project.md](docs/create-project.md) | Starting a project from [Waffle](https://github.com/treehousetim/waffle) | What `composer create-project` asks, what the rename touches and leaves alone, and its failure list. |
+| [docs/fresh-install.md](docs/fresh-install.md) | Putting it on a server for the first time | From nothing to production: Doppler configs, the droplet, the certificate, the GitHub environment, the first release. |
+| [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
+| [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
+| [docs/settings.md](docs/settings.md) | Adding a setting, or wanting a worked example of a slice | The settings table, the Settings page, and how to add a setting. |
+| [CHANGELOG.md](CHANGELOG.md) | Cutting a release, or catching up | What changed in each release, and what is waiting under `[Unreleased]`. |
+| [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) | The brief is silent on something | Decisions not yet made. Answered ones move to [RESOLVED_QUESTIONS.md](RESOLVED_QUESTIONS.md). |
+
+Each feature gets its own `docs/<slice>.md` holding its design, its numbered failure list and what was built; add a row here when it lands.
 
 ## Making it yours
 
-Once, right after copying the template, before anything is started:
-
 ```bash
-./tools/rename-project.sh <slug> "<Display Name>" <production-hostname>
-#   e.g. ./tools/rename-project.sh acme "Acme Ops" ops.acme.com
-(cd src/frontend && npm install --package-lock-only)
-docker compose up -d && docker compose exec php composer update --lock
-git init && git add -A && git commit -m "Start from the basic app template"
+composer create-project treehousetim/waffle acme
 ```
 
-The slug becomes the database names, the Doppler project and `/opt/<slug>` on the server. Then replace the placeholder paragraph in AGENTS.md §1 with what you are building.
+Composer copies [Waffle](https://github.com/treehousetim/waffle) into `acme/` and asks for three names: the slug (database names, the Doppler project, `/opt/<slug>` on the server), the display name, and the production hostname. Each is suggested from the directory name; press enter to take it. [docs/create-project.md](docs/create-project.md) has the details, including how to rename a clone by hand with `./tools/rename-project.sh`. Then:
+
+```bash
+cd acme
+(cd src/frontend && npm install --package-lock-only)
+docker compose up -d && docker compose exec php composer update --lock
+git init && git add -A && git commit -m "Start from treehousetim/waffle"
+```
+
+and replace the placeholder paragraph in AGENTS.md §1 with what you are building.
+
+## Services to sign up for
+
+| Service | What it is for | Cost |
+| --- | --- | --- |
+| [GitHub](https://github.com) | The repository, and GitHub Actions, which builds and deploys every release through a `prod` environment. | Free for public and private repos within the Actions allowance. |
+| [DigitalOcean](https://www.digitalocean.com) | The one droplet production runs on (Ubuntu LTS; 2 GB RAM is plenty to start). | From a few dollars a month. |
+| [Doppler](https://www.doppler.com) | The only source of secrets, locally and in production (`dev`, `prd`, `prod-deploy`). | Free tier covers it. |
+| A domain registrar | The production hostname. Any registrar works; its DNS can be hosted by the registrar or by DigitalOcean for free. | A domain a year. |
+
+Needed, but nothing to sign up for:
+
+- **Let's Encrypt** issues the certificate. `certbot` registers with an email address on the server; there is no account to create.
+- **Docker** runs the stack locally. Docker Desktop is free for personal use and small businesses but needs a paid subscription in larger organisations; [OrbStack](https://orbstack.dev) or [Colima](https://github.com/abiosoft/colima) work too.
+
+Optional:
+
+- **A heartbeat monitor**, such as [healthchecks.io](https://healthchecks.io): its URL goes in `HEARTBEAT_URL`, and it alerts you when the five-minute health check stops arriving.
+- **Slack**: an incoming-webhook URL in `DEPLOY_ALERT_WEBHOOK`, posted to when a deploy fails.
+
+[docs/fresh-install.md](docs/fresh-install.md) walks through setting each one up.
 
 ## Prerequisites
 
@@ -93,3 +130,7 @@ The dev server runs on 5173 and proxies `/api`, `/cron` and `/webhooks` to `http
 ## Going to production
 
 [docs/fresh-install.md](docs/fresh-install.md) walks through it from nothing: Doppler configs, the server, the certificate, the GitHub environment, and the first release.
+
+## License
+
+[MIT](LICENSE). A project started from [Waffle](https://github.com/treehousetim/waffle) is yours to license however you like; keep the `LICENSE` file's notice with any substantial part of treehousetim/waffle you redistribute.

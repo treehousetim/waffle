@@ -75,6 +75,7 @@ uses()->group('core')->in(
     'Unit/NginxHeadersTest.php',
     'Unit/ReleaseTest.php',
     'Unit/DeployScriptsTest.php',
+    'Unit/CreateProjectTest.php',
     'Feature/AuthTest.php',
     'Feature/HelloTest.php',
     'Feature/CronTest.php',

@@ -11,6 +11,20 @@ version in `src/frontend/package.json` has one.
 
 ## [Unreleased]
 
+### Added
+- **`composer create-project treehousetim/waffle <dir>`** asks for a slug, display name and hostname, suggests each from the directory name, and runs `tools/rename-project.sh` (docs/create-project.md, with its failure list).
+- **MIT licence**, and a Packagist description and keywords.
+- **README: services to sign up for, and a documentation table** that replaces `docs/README.md` as the one index.
+
+### Changed
+- **Cron moved to its own port.** `/cron` is served only on 8081, published on the server's loopback address alone; ports 80 and 443 answer it with 404. Port 80 is public, and Docker's userland proxy can make an outside connection look like it came from the bridge network the old allow list trusted. The crontab now calls `http://127.0.0.1:8081/cron/<job>`.
+- **`tools/rename-project.sh` renames Waffle's own names** (`waffle`, `Waffle`, `waffle.example.com`), gives `composer.json` the project's own name, keeps lines pointing at `treehousetim/waffle`, and validates the display name and hostname before touching anything.
+- **`tools/changed-groups.sh`** maps `tools/`, `deploy/`, `docker/`, the Compose files, `composer.json` and `CHANGELOG.md` to `core`, whose tests assert them.
+
+### Security
+- **The form-body refusal decodes the path first.** `POST /%61pi/auth/login` with a form body reached the login route, because the router decodes the path and the check did not.
+- **Sign-in refuses every account status but normal.** It checked only Delight's `isSuspended()`, so a banned, locked, archived or pending account got one successful sign-in before `AuthMiddleware` ended it.
+
 ## [0.0.1] - 2026-10-12
 
 ### Added

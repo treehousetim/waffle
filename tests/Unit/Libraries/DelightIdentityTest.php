@@ -94,13 +94,24 @@ it('translates an unverified address into AccountNotVerified', function (): void
         ->toThrow(AccountNotVerified::class, 'This account has not been verified.');
 });
 
-it('refuses an account that has been turned off, and leaves no session behind', function (): void {
-    $id = Factory::createDisabledUser();
+it('refuses an account that has been turned off, and leaves no session behind', function (int $status): void {
+    $id = Factory::createDisabledUser(Role::User, $status);
     [$email] = Factory::credentialsFor($id);
 
     expect(fn () => $this->identity->login($email, Factory::PASSWORD))->toThrow(AccountDisabled::class)
         ->and($this->identity->isAuthenticated())->toBeFalse();
-});
+})->with([
+    /*
+     * Every status but normal, not just suspended: Delight's isSuspended()
+     * matches 5 alone, so a banned or locked account used to get one
+     * successful sign-in before AuthMiddleware (status must be 0) caught it.
+     */
+    'archived' => [1],
+    'banned' => [2],
+    'locked' => [3],
+    'pending review' => [4],
+    'suspended' => [5],
+]);
 
 it('translates Delight rate limiting into TooManyAttempts', function (): void {
     // The container's Auth has throttling switched off for the suite, so this

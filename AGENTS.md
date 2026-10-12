@@ -89,7 +89,7 @@ src/
 docker/
   php/Dockerfile          # php:8.5-fpm + pdo_mysql zip, composer copied from composer:2, ARG PHP_INI selects php.ini vs php.prod.ini
   nginx/default.conf      # local
-  nginx/production.conf   # 80→443 redirect, loopback-only /cron on 80, Let's Encrypt certs mounted read-only
+  nginx/production.conf   # 80→443 redirect, /cron on loopback-only 8081, Let's Encrypt certs mounted read-only
   nginx/security-headers.conf  # included in the server block and every location that sets a header
 deploy/
   deploy.sh               # idempotent; runs on the server against a tree the runner rsync'd
@@ -111,7 +111,7 @@ tests/
   Unit/                   # services, state machines, repositories, middleware, scripts
   Schema/                 # tests that need DDL; NOT transaction-wrapped
   Arch/                   # architecture rules
-docs/                     # anything too long-lived for a comment; start at docs/README.md
+docs/                     # anything too long-lived for a comment; indexed in README.md's Documentation table
 .env.testing              # committed; test DB name and dummy values only, no secrets
 doppler.yaml              # project + default config; no values
 .github/workflows/deploy.yml
@@ -322,7 +322,7 @@ The rsync excludes `.env`, `.env.testing`, `tests/`, `phpunit.xml`, `src/app/phi
 
 Rollback is re-running the workflow for the older tag — there is no server-side checkout to revert to, and re-running re-runs the whole tested pipeline. Migrations are not rolled back, which is why they only ever expand.
 
-Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://localhost/cron/<job>` lines and every job endpoint is idempotent. `deploy/crontab` is the authoritative list and carries the reasoning for each interval. Today: `health` every five minutes (pinging `HEARTBEAT_URL` after it, when set) and the nightly `tools/backup-prod-db.sh`.
+Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://127.0.0.1:8081/cron/<job>` lines and every job endpoint is idempotent. `deploy/crontab` is the authoritative list and carries the reasoning for each interval. Today: `health` every five minutes (pinging `HEARTBEAT_URL` after it, when set) and the nightly `tools/backup-prod-db.sh`.
 
 ---
 
@@ -333,7 +333,7 @@ Cron jobs are `curl -sf -H @/opt/<slug>/.deploy/cron-header http://localhost/cro
 - **Vite writes into `src/public`.** `outDir` is `../public` with `emptyOutDir: false`, and the `build` script first `rm -rf ../public/assets ../public/index.html`. Both are gitignored build output — never commit them, and never hand-edit them.
 - **Caching is asymmetric on purpose.** Nginx serves `/assets/` with `expires 1y` + `public, immutable` because Vite hashes filenames, but SPA routes and `index.html` are served `no-cache, no-store, must-revalidate`. If you ever let `index.html` be cached, clients pin themselves to a dead bundle.
 - **nginx `add_header` does not inherit into a location that sets its own.** Every location that sets a header must include `security-headers.conf`; `NginxHeadersTest` enforces it.
-- **`/cron` is served on port 80 to loopback and the Docker bridge only, and is 404 over HTTPS.** Cron calls `http://localhost`, and `curl -sf` neither follows a redirect nor treats a 301 as failure, so a blanket 80→443 redirect would make every cron job silently do nothing.
+- **`/cron` is served only on port 8081, which production publishes on the host's loopback address alone; ports 80 and 443 answer it with 404.** Not port 80: it is published to the world, and Docker's userland proxy can present an outside connection as coming from the bridge gateway, inside an IP allow list. And 404 rather than the 80→443 redirect, because `curl -sf` neither follows a redirect nor treats a 301 as failure, so a crontab pointing at port 80 would silently do nothing.
 - **DDL inside a transaction-wrapped test silently breaks the rollback.** MariaDB auto-commits on DDL, so a `CREATE`/`ALTER`/`DROP` in a `Feature` or `Unit` test leaks state into every later test. DDL belongs in `tests/Schema`.
 - **Migrations land before the PHP restart.** Production runs OPcache with `validate_timestamps=0`, so the old code keeps serving until `deploy.sh` restarts php — for a few seconds the previous release runs against the new schema. Expand in one release, contract in the next.
 - **A migration that skips is still recorded.** `CreateInitialOwner` with `FIRST_*` empty prints "skipped" and phinx marks it run; deploying again does not retry it. Put the values in `prd` before the first release, or delete its `phinxlog` row and migrate again.

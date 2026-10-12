@@ -106,18 +106,63 @@ it('sets a content security policy that allows only the app\'s own code to run',
         ->and($directives['script-src'] ?? null)->toBe(["'self'"]);
 });
 
-it('serves /cron on port 80 to this machine and its containers only', function (): void {
-    $conf = nginxConf('production.conf');
+/**
+ * The text of the `server { ... }` block that listens on a port.
+ */
+function nginxServer(string $conf, string $listen): string
+{
+    foreach (preg_split('/^server \{/m', $conf) ?: [] as $block) {
+        if (preg_match('/^\s*listen ' . preg_quote($listen, '/') . '[ ;]/m', $block)) {
+            return $block;
+        }
+    }
+
+    return '';
+}
+
+it('serves /cron on a port of its own, to this machine and its containers only', function (): void {
+    /*
+     * Not port 80. Port 80 is published to the world, and Docker's userland
+     * proxy can present an outside connection as coming from the bridge
+     * gateway -- inside the allow list. The cron port is published on the
+     * host's loopback only (see the compose test below), so nothing off the
+     * server can open a connection to it at all; the allow list is the
+     * second layer, and CronMiddleware's secret the third.
+     */
+    $cron = nginxServer(nginxConf('production.conf'), '8081');
     $allowed = [];
 
-    foreach (nginxLocations($conf) as $block) {
+    foreach (nginxLocations($cron) as $block) {
         if (preg_match('#^location \^~ /cron/#', trim($block)) && str_contains($block, 'allow')) {
             preg_match_all('/allow\s+([^;]+);/', $block, $matches);
             $allowed[] = $matches[1];
         }
     }
 
-    expect($allowed)->toBe([['127.0.0.0/8', '172.16.0.0/12', '::1/128']]);
+    expect($cron)->not->toBe('')
+        ->and($allowed)->toBe([['127.0.0.0/8', '172.16.0.0/12', '::1/128']])
+        // Nothing else lives on the cron port.
+        ->and($cron)->toContain("location / {\n        return 404;");
+});
+
+it('answers /cron on port 80 with 404, so a stale crontab fails loudly', function (): void {
+    /*
+     * Not a redirect: `curl -sf` neither follows a 301 nor treats one as an
+     * error, so a crontab still pointing at port 80 would succeed silently and
+     * do nothing. A 404 makes it fail.
+     */
+    $http = nginxServer(nginxConf('production.conf'), '80');
+
+    expect($http)->toContain("location ^~ /cron/ {\n        return 404;")
+        ->and($http)->not->toContain('allow');
+});
+
+it('publishes the cron port on the host\'s loopback only', function (): void {
+    $compose = (string) file_get_contents(dirname(__DIR__, 2) . '/docker-compose.prod.yml');
+
+    preg_match_all('/"([^"]*:8081)"/', $compose, $published);
+
+    expect($published[1])->toBe(['127.0.0.1:8081:8081']);
 });
 
 it('includes them in every location that sets a header of its own', function (string $file): void {

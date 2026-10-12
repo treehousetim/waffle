@@ -1,8 +1,14 @@
 {
     "name": "treehousetim/waffle",
-    "description": "Waffle",
+    "description": "Waffle Application Framework For Lazy Engineers: a test-first starting point for PHP 8.5 + Slim 4 + Vue 3 web apps, with Docker Compose, Doppler secrets and a one-server GitHub Actions deploy.",
     "type": "project",
-    "license": "proprietary",
+    "keywords": ["skeleton", "starter", "slim", "vue", "pest", "docker", "doppler"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tim Gallagher"
+        }
+    ],
     "require": {
         "php": "^8.5",
         "ext-json": "*",
@@ -28,8 +34,14 @@
     },
     "autoload-dev": {
         "psr-4": {
+            "Installer\\": "tools/installer/",
             "Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "post-create-project-cmd": [
+            "Installer\\CreateProject::postCreate"
+        ]
     },
     "config": {
         "sort-packages": true,

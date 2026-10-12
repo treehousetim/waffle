@@ -11,6 +11,9 @@
 # line: a command line is readable by every process on the server through ps,
 # for as long as the curl runs.
 #
+# Cron is served on 127.0.0.1:8081 only (docker/nginx/production.conf); port
+# 80 answers /cron with 404 and 443 never serves it.
+#
 # Every /cron endpoint is idempotent and is rejected with 403 unless the
 # X-Cron-Secret header matches CRON_SECRET, so a missed run is harmless and an
 # overlapping run does no damage.
@@ -26,7 +29,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # The cron path and the database, end to end. Every five minutes because it is
 # what pings the heartbeat: the outside service alerts when the pings stop.
-*/5 * * * * curl -sf -H @__CRON_HEADER_FILE__ http://localhost/cron/health >/dev/null 2>&1__HEARTBEAT__
+*/5 * * * * curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/health >/dev/null 2>&1__HEARTBEAT__
 
 # The nightly database dump (tools/backup-prod-db.sh keeps the newest 14). Its
 # output is kept, because "did last night's backup work" has to be answerable.

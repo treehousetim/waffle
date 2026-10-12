@@ -91,21 +91,21 @@ final class Factory
 
     /**
      * A user whose account has been turned off (Delight's status column; any
-     * value but 0 means not normal).
+     * value but 0 means not normal). 1 archived, 2 banned, 3 locked, 4 pending
+     * review, 5 suspended -- Delight\Auth\Status.
      */
-    public static function createDisabledUser(?Role $role = Role::User): int
+    public static function createDisabledUser(?Role $role = Role::User, int $status = 5): int
     {
         $id = self::createUser($role);
 
-        self::disable($id);
+        self::disable($id, $status);
 
         return $id;
     }
 
-    public static function disable(int $userId): void
+    public static function disable(int $userId, int $status = 5): void
     {
-        // 5 is Delight\Auth\Status::SUSPENDED.
-        self::pdo()->prepare('UPDATE users SET status = 5 WHERE id = ?')->execute([$userId]);
+        self::pdo()->prepare('UPDATE users SET status = ? WHERE id = ?')->execute([$status, $userId]);
     }
 
     /**

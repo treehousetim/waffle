@@ -50,7 +50,7 @@ it('renders the crontab with the header file and no heartbeat', function (): voi
     [$code, $out] = runScript('deploy/render-crontab.sh', ['deploy/crontab', '/opt/app/.deploy/cron-header']);
 
     expect($code)->toBe(0)
-        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://localhost/cron/health >/dev/null 2>&1' . "\n")
+        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/health >/dev/null 2>&1' . "\n")
         ->and($out)->not->toContain('__CRON_HEADER_FILE__')
         ->and($out)->not->toContain('__HEARTBEAT__');
 });
@@ -77,7 +77,7 @@ it('refuses a heartbeat URL that could be shell in a crontab', function (string 
 ]);
 
 it('calls only cron routes that exist', function (): void {
-    preg_match_all('#http://localhost(/cron/[a-z0-9-]+)#', (string) file_get_contents(dirname(__DIR__, 2) . '/deploy/crontab'), $called);
+    preg_match_all('#http://127\.0\.0\.1:8081(/cron/[a-z0-9-]+)#', (string) file_get_contents(dirname(__DIR__, 2) . '/deploy/crontab'), $called);
 
     $registered = [];
 

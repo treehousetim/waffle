@@ -52,6 +52,10 @@ for file in $changed; do
         tests/Schema/*)      groups="$groups schema" ;;
 
         src/app/*|src/config/*|tests/*) groups="$groups core"; shared=1 ;;
+        # Config and scripts the core suite asserts by shape (NginxHeadersTest,
+        # DeployScriptsTest, CreateProjectTest, ReleaseTest).
+        tools/*|deploy/*|docker/*|docker-compose*.yml|composer.json|CHANGELOG.md)
+            groups="$groups core" ;;
     esac
 done
 

@@ -53,3 +53,15 @@ it('refuses a form-encoded write to the API, which a plain HTML form could send'
     expect($response->getStatusCode())->toBe(415)
         ->and($this->json($response)['error'])->toBe('Only JSON is accepted here.');
 });
+
+it('refuses the same form write when the path is percent-encoded', function (): void {
+    // The router decodes /%61pi to /api; the refusal has to see what it sees.
+    $request = $this->buildRequest('POST', '/%61pi/auth/login')
+        ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
+        ->withParsedBody(['email' => 'a@b.c', 'password' => 'x']);
+
+    $response = Tests\TestCase::app()->handle($request);
+
+    expect($response->getStatusCode())->toBe(415)
+        ->and($this->json($response)['error'])->toBe('Only JSON is accepted here.');
+});
