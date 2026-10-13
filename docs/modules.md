@@ -214,9 +214,11 @@ shows that plainly.
 ## Checking a module
 
 Copy the module into `modules/` in a Waffle checkout or app (a directory, a
-`.zip` or a `<name>.module.md`) and run:
+`.zip` of one or a `<name>.module.md`), named for its front matter's `name:`
+(a `.zip` holds a `<name>/` directory), and run:
 
 ```bash
+git clone https://github.com/treehousetim/waffle-short-links modules/short-links
 ./tools/test.sh tests/Unit/ModulesTest.php
 ```
 
