@@ -169,7 +169,7 @@ lock() {
     fi
 }
 
-printf '%sWaffle setup%s — Waffle Application Framework For Lazy Engineers\n' "$BOLD" "$RESET"
+printf '%sWaffle setup%s — Web Application Foundation For Lay Engineers\n' "$BOLD" "$RESET"
 
 # ---------------------------------------------------------------------------
 # 1. Platform and tools.

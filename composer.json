@@ -1,6 +1,6 @@
 {
     "name": "treehousetim/waffle",
-    "description": "Waffle Application Framework For Lazy Engineers: a test-first starting point for PHP 8.5 + Slim 4 + Vue 3 web apps, with Docker Compose, Doppler secrets and a one-server GitHub Actions deploy.",
+    "description": "Web Application Foundation For Lay Engineers: a test-first starting point for PHP 8.5 + Slim 4 + Vue 3 web apps, with Docker Compose, Doppler secrets and a one-server GitHub Actions deploy.",
     "type": "project",
     "keywords": ["skeleton", "starter", "slim", "vue", "pest", "docker", "doppler"],
     "license": "MIT",

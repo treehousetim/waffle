@@ -122,7 +122,7 @@ fi
 # above and containing $KEEP, so no later run renames it.
 if [ -f README.md ]; then
     sed -i.rename-bak \
-        -e 's|^\*\*W\*\*affle \*\*A\*\*pplication .*$|Built on [Waffle](https://github.com/treehousetim/waffle), the Waffle Application Framework For Lazy Engineers.|' \
+        -e 's|^\*\*W\*\*eb \*\*A\*\*pplication \*\*F\*\*oundation .*$|Built on [Waffle](https://github.com/treehousetim/waffle), the Web Application Foundation For Lay Engineers.|' \
         README.md
     rm -f README.md.rename-bak
 fi

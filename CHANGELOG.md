@@ -12,6 +12,9 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+### Changed
+- **The backronym:** Waffle now stands for **W**eb **A**pplication **F**oundation **F**or **L**ay **E**ngineers.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added

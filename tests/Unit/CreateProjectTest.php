@@ -132,7 +132,7 @@ it('keeps the link back to Waffle, and keeps it intact on a second run (3, 10)',
     runRename($this->dir, ['acme', 'Acme Ops', 'ops.acme.com']);
 
     expect($first)->toContain('Built on [Waffle](https://github.com/treehousetim/waffle)')
-        ->not->toContain('**W**affle')
+        ->not->toContain('**W**eb **A**pplication **F**oundation')
         ->and(file_get_contents($this->dir . '/README.md'))->toBe($first);
 });
 

@@ -1,6 +1,6 @@
 # Waffle
 
-**W**affle **A**pplication **F**ramework **F**or **L**azy **E**ngineers.
+**W**eb **A**pplication **F**oundation **F**or **L**ay **E**ngineers.
 
 ## What this is, and who it's for
 
