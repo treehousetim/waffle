@@ -54,7 +54,7 @@ for file in $changed; do
         src/app/*|src/config/*|tests/*) groups="$groups core"; shared=1 ;;
         # Config and scripts the core suite asserts by shape (CaddyfileTest,
         # DeployScriptsTest, CreateProjectTest, ReleaseTest).
-        tools/*|deploy/*|docker/*|docker-compose*.yml|composer.json|CHANGELOG.md)
+        tools/*|deploy/*|docker/*|docker-compose*.yml|composer.json|CHANGELOG.md|modules/*)
             groups="$groups core" ;;
     esac
 done

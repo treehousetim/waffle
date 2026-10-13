@@ -78,6 +78,7 @@ uses()->group('core')->in(
     'Unit/NpmTest.php',
     'Unit/ComposerTest.php',
     'Unit/DatabasePortTest.php',
+    'Unit/ModulesTest.php',
     'Unit/DeployScriptsTest.php',
     'Unit/CreateProjectTest.php',
     'Unit/SetupGithubTest.php',

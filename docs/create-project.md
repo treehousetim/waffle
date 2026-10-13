@@ -68,7 +68,8 @@ Then three things that describe Waffle itself rather than a placeholder:
 
 Any line containing `treehousetim/waffle` is left alone, so that link, and
 anything else pointing at the framework, survives. This document, both scripts,
-the installer and `LICENSE` are never touched.
+the installer, `LICENSE`, `docs/modules.md` and everything in `modules/` are
+never touched: modules name the framework on purpose.
 
 ## Failure list
 
