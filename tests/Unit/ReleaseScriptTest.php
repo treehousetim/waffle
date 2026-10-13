@@ -111,7 +111,7 @@ function runRelease(array $repo, array $args = [], array $env = []): array
         'code' => $code,
         'out' => $out,
         'err' => $err,
-        'gh' => (string) @file_get_contents($repo['base'] . '/gh.log'),
+        'gh' => is_file($repo['base'] . '/gh.log') ? (string) file_get_contents($repo['base'] . '/gh.log') : '',
         'notes' => is_file($repo['base'] . '/notes.md') ? (string) file_get_contents($repo['base'] . '/notes.md') : null,
     ];
 }

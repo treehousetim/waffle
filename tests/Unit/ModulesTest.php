@@ -33,8 +33,8 @@ function waffleModules(): array
     foreach (moduleRoots() as $root) {
         foreach (glob($root . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
             $modules[basename($dir)] = [
-                (string) @file_get_contents($dir . '/MODULE.md'),
-                (string) @file_get_contents($dir . '/MODULE-TEST.md'),
+                is_file($dir . '/MODULE.md') ? (string) file_get_contents($dir . '/MODULE.md') : '',
+                is_file($dir . '/MODULE-TEST.md') ? (string) file_get_contents($dir . '/MODULE-TEST.md') : '',
             ];
         }
 

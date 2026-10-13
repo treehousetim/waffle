@@ -32,7 +32,7 @@ function renameFixture(): string
         'modules/README.md',
         'tests/Support/Fixtures/modules/fixture-notes/MODULE.md',
     ] as $path) {
-        @mkdir(dirname($dir . '/' . $path), 0o777, true);
+        is_dir(dirname($dir . '/' . $path)) || mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
     }
 

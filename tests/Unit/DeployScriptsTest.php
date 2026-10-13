@@ -138,7 +138,7 @@ function checkDns(string $host, array $env = []): array
     fclose($pipes[1]);
     fclose($pipes[2]);
     $code = proc_close($process);
-    $args = (string) @file_get_contents($bin . '/dig.args');
+    $args = is_file($bin . '/dig.args') ? (string) file_get_contents($bin . '/dig.args') : '';
 
     exec('rm -rf ' . escapeshellarg($bin));
 
