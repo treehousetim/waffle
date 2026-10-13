@@ -3,14 +3,23 @@
 declare(strict_types=1);
 
 /*
- * The Waffle Iron module format (docs/modules.md): every module in modules/,
- * as a directory, a .zip of one, or a single <name>.module.md, holds at least
- * what the specification requires.
+ * The Waffle Iron module format (docs/modules.md). Waffle ships no modules:
+ * this checks the fixture under tests/Support/Fixtures/modules/, so the rules
+ * themselves are always exercised, and any module an author drops into
+ * modules/ (a directory, a .zip of one, or a single <name>.module.md) to check
+ * it before publishing or installing.
  */
 
 const MODULE_SECTIONS = ['Purpose', 'Roles and permissions', 'Data model and migrations', 'Failure list', 'Installation'];
 const MODULE_TEST_SECTIONS = ['Desired outcomes', 'How to test', 'Definition of done'];
 const MODULE_KEYS = ['name', 'title', 'version', 'summary', 'waffle', 'proven-on', 'author', 'license', 'permissions', 'libraries', 'config'];
+const MODULE_FIXTURE = 'fixture-notes';
+
+/** @return list<string> the directories modules are read from: the fixture's, then modules/ */
+function moduleRoots(): array
+{
+    return [dirname(__DIR__) . '/Support/Fixtures/modules', dirname(__DIR__, 2) . '/modules'];
+}
 
 /**
  * Every module, as [name => [module file text, module-test file text]].
@@ -19,30 +28,81 @@ const MODULE_KEYS = ['name', 'title', 'version', 'summary', 'waffle', 'proven-on
  */
 function waffleModules(): array
 {
-    $root = dirname(__DIR__, 2) . '/modules';
     $modules = [];
 
-    foreach (glob($root . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
-        $modules[basename($dir)] = [
-            (string) @file_get_contents($dir . '/MODULE.md'),
-            (string) @file_get_contents($dir . '/MODULE-TEST.md'),
-        ];
+    foreach (moduleRoots() as $root) {
+        foreach (glob($root . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            $modules[basename($dir)] = [
+                (string) @file_get_contents($dir . '/MODULE.md'),
+                (string) @file_get_contents($dir . '/MODULE-TEST.md'),
+            ];
+        }
+
+        foreach (glob($root . '/*.module.md') ?: [] as $file) {
+            $text = (string) file_get_contents($file);
+            $modules[basename($file, '.module.md')] = [$text, $text];
+        }
+
+        foreach (glob($root . '/*.zip') ?: [] as $file) {
+            $zip = new ZipArchive();
+            $name = basename($file, '.zip');
+            $zip->open($file);
+            $modules[$name] = [
+                (string) $zip->getFromName($name . '/MODULE.md'),
+                (string) $zip->getFromName($name . '/MODULE-TEST.md'),
+            ];
+            $zip->close();
+        }
     }
 
-    foreach (glob($root . '/*.module.md') ?: [] as $file) {
-        $text = (string) file_get_contents($file);
-        $modules[basename($file, '.module.md')] = [$text, $text];
-    }
+    ksort($modules);
 
-    foreach (glob($root . '/*.zip') ?: [] as $file) {
-        $zip = new ZipArchive();
-        $name = basename($file, '.zip');
-        $zip->open($file);
-        $modules[$name] = [
-            (string) $zip->getFromName($name . '/MODULE.md'),
-            (string) $zip->getFromName($name . '/MODULE-TEST.md'),
-        ];
-        $zip->close();
+    return $modules;
+}
+
+/**
+ * Every file name in every directory and .zip module, and whether it is a
+ * symlink, as [name => [relative path => is a symlink]]. A clone's .git/ is
+ * not part of the module (docs/modules.md, "The hash").
+ *
+ * @return array<string,array<string,bool>>
+ */
+function moduleEntries(): array
+{
+    $modules = [];
+
+    foreach (moduleRoots() as $root) {
+        foreach (glob($root . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            $entries = [];
+            $files = new RecursiveIteratorIterator(
+                new RecursiveCallbackFilterIterator(
+                    new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+                    static fn (SplFileInfo $file): bool => $file->getFilename() !== '.git',
+                ),
+                RecursiveIteratorIterator::SELF_FIRST,
+            );
+
+            foreach ($files as $file) {
+                $entries[substr($file->getPathname(), strlen($dir) + 1)] = is_link($file->getPathname());
+            }
+
+            $modules[basename($dir)] = $entries;
+        }
+
+        foreach (glob($root . '/*.zip') ?: [] as $file) {
+            $entries = [];
+            $zip = new ZipArchive();
+            $zip->open($file);
+
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $zip->getExternalAttributesIndex($i, $system, $attributes);
+                $entries[(string) $zip->getNameIndex($i)] = $system === ZipArchive::OPSYS_UNIX
+                    && (($attributes >> 16) & 0o170000) === 0o120000;
+            }
+
+            $zip->close();
+            $modules[basename($file, '.zip')] = $entries;
+        }
     }
 
     ksort($modules);
@@ -82,9 +142,19 @@ function moduleNumbers(string $section): array
     return array_map('intval', $numbers[1]);
 }
 
-it('ships at least one module', function (): void {
-    expect(waffleModules())->not->toBe([]);
+it('always has the fixture module to check', function (): void {
+    expect(waffleModules())->toHaveKey(MODULE_FIXTURE)
+        ->and(moduleEntries())->toHaveKey(MODULE_FIXTURE);
 });
+
+it('holds no symlinks and only printable ASCII file names, so the hash means one thing', function (string $name, array $entries): void {
+    expect($entries)->not->toBe([]);
+
+    foreach ($entries as $path => $isLink) {
+        expect($isLink)->toBeFalse("{$name}: {$path} is a symlink")
+            ->and(preg_match('/\A[\x20-\x7E]+\z/', $path))->toBe(1, "{$name}: a file name that is not printable ASCII");
+    }
+})->with(fn (): array => array_map(static fn (string $name, array $entries): array => [$name, $entries], array_keys(moduleEntries()), moduleEntries()));
 
 it('gives every module its required front matter', function (string $name, array $files): void {
     $keys = moduleFrontMatter($files[0]);

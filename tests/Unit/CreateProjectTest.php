@@ -29,7 +29,8 @@ function renameFixture(): string
         'VERSION',
         'CHANGELOG.md',
         'docs/modules.md',
-        'modules/short-links/MODULE.md',
+        'modules/README.md',
+        'tests/Support/Fixtures/modules/fixture-notes/MODULE.md',
     ] as $path) {
         @mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
@@ -99,7 +100,7 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
     $leftovers = [];
 
     foreach (treeContents($this->dir) as $path => $contents) {
-        if (in_array($path, ['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/short-links/MODULE.md'], true)) {
+        if (in_array($path, ['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md'], true)) {
             continue;
         }
 
@@ -217,7 +218,7 @@ it('never touches the installer, its autoload entry, this document, the licence 
     $after = treeContents($this->dir);
     $composer = json_decode($after['composer.json'], true);
 
-    foreach (['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/short-links/MODULE.md'] as $path) {
+    foreach (['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md'] as $path) {
         expect($after[$path])->toBe($before[$path], $path);
     }
 

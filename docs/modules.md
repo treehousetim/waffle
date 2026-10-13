@@ -12,9 +12,13 @@ the feature into the app as an ordinary slice, and the app owns the result.
 What makes that dependable is the second required file, which says exactly
 what "working" means and how to prove it.
 
-This document is the specification. `modules/short-links/` is the first module
-and the worked example; `tests/Unit/ModulesTest.php` holds every module in
-`modules/` to the minimum below.
+This document is the specification. Waffle ships no modules of its own: they
+live in their own repositories and are listed in
+[Waffle Iron](https://github.com/treehousetim/waffle-iron). The first, and the
+worked example, is
+[short links](https://github.com/treehousetim/waffle-short-links).
+`tests/Unit/ModulesTest.php` holds every module dropped into `modules/` to the
+minimum below (see "Checking a module").
 
 ## What a module contains
 
@@ -57,6 +61,40 @@ and the worked example; `tests/Unit/ModulesTest.php` holds every module in
   section `MODULE.md` requires and every section `MODULE-TEST.md` requires, in
   that order. For a small feature, or a contributor sharing nothing but the
   description.
+
+A package may also hold files for people, such as a `README.md` and a
+`LICENSE`; agents ignore them, but they are part of the package and its hash.
+A module can be a repository of its own with the package at its root (path
+`.`), or one directory of a larger repository.
+
+### Files and the hash
+
+A module's SHA-256 is how an app and Waffle Iron know they mean the same bytes,
+so a package holds nothing whose meaning depends on the machine reading it:
+
+- **No symlinks**, and **no file name** with anything but printable ASCII.
+  From inside the package, `find . -type l` and
+  `LC_ALL=C find . -name '*[![:print:]]*'` both print nothing.
+  `ModulesTest` refuses either.
+- **A `.zip` or a single `.module.md`** is hashed as the file:
+  `shasum -a 256 <file>`.
+- **A directory** is hashed from inside it, over every file, sorted bytewise:
+
+  ```bash
+  find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256
+  ```
+
+  Every file counts, hidden ones included, so hash the tree exactly as it is
+  at the commit and nothing else: not a clone's working copy, whose `.git/`
+  would be hashed with it, and not a folder a desktop has dropped a
+  `.DS_Store` into. Export it first:
+
+  ```bash
+  mkdir /tmp/module && git archive <commit> <path> | tar -x -C /tmp/module
+  cd /tmp/module/<path> && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256
+  ```
+
+  For a package at the repository's root, `<path>` is `.`.
 
 ## `MODULE.md`
 
@@ -146,8 +184,11 @@ The steps, once agreed:
 3. Build the slice the way `docs/adding-a-feature.md` describes, adapting the
    reference code if there is any, until the module's tests and the whole
    suite pass: `./tools/test.sh --coverage`.
-4. Record it in `modules.json` at the app's root: name, version, source, the
-   SHA-256 of the package or file installed, and the date.
+4. Record it in `modules.json` at the app's root: name, version, source (for a
+   repository: its URL, the 40-character commit and the path), the SHA-256 of
+   the package or file installed ("Files and the hash"), and the date. Before
+   building, check that hash against the module's Waffle Iron entry; a
+   mismatch stops the install and the owner is asked.
 5. Note it in `CHANGELOG.md` under `[Unreleased]`.
 
 After that it is the app's code. The owner can restyle it, add fields, change
@@ -170,15 +211,36 @@ as the evidence. The proof is repeated for each Waffle version listed in
 `proven-on`; a module that has not been proven says `none`, and Waffle Iron
 shows that plainly.
 
+## Checking a module
+
+Copy the module into `modules/` in a Waffle checkout or app (a directory, a
+`.zip` or a `<name>.module.md`) and run:
+
+```bash
+./tools/test.sh tests/Unit/ModulesTest.php
+```
+
+It checks the front matter, the required sections of both files, that every
+level is accounted for and the data has its migrations, that every failure is
+covered by an outcome, and the file rules above. A clone's `.git/` is skipped.
+`modules/` is otherwise empty: Waffle ships none, and the fixture
+`ModulesTest` always checks (`tests/Support/Fixtures/modules/fixture-notes/`)
+is a test fixture, never a module to install. Like everything `tools/test.sh`
+runs, this starts the app's Docker stack.
+
 ## Publishing to Waffle Iron
 
-Waffle Iron starts as a catalogue: each entry names a module, its version,
-where to get it (a repository, a `.zip` or a single `.module.md`), the
-SHA-256 of that file, and the Waffle versions it is proven on. A module is
-listed once its files pass the format check (`tests/Unit/ModulesTest.php`
-holds the rules) and has been read by a person: a module is a set of
-instructions an agent will follow, so the catalogue does not list one nobody
-has reviewed.
+[Waffle Iron](https://github.com/treehousetim/waffle-iron) is the catalogue: a
+GitHub repository, not a service. Its `index.json` is what agents read; each
+version of a module there names the Waffle versions it is written for, its
+form, where it lives (repository, full commit, path), its SHA-256, the Waffle
+versions it is proven on, and who reviewed it. A listed version is never
+edited, except to add a proof or to mark it yanked with a reason.
+
+Submissions are pull requests to that repository; its `CONTRIBUTING.md` has
+the steps. A module is listed once its files pass `ModulesTest` and a person
+has read it: a module is a set of instructions an agent will follow, so the
+catalogue does not list one nobody has reviewed.
 
 ## Writing a module
 

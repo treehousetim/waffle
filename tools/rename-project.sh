@@ -71,9 +71,10 @@ fi
 
 # Lines that point at the framework itself, and files that describe the rename.
 KEEP='treehousetim/waffle'
-# Modules and their spec name the framework on purpose (and modules carry a
-# `waffle:` compatibility key), so they keep its name in every project.
-EXCLUDED='^(\./)?(tools/rename-project\.sh|tools/setup\.sh|tools/installer/CreateProject\.php|docs/create-project\.md|LICENSE|docs/modules\.md|modules/.*)$'
+# Modules, their spec and ModulesTest's fixture module name the framework on
+# purpose (and modules carry a `waffle:` compatibility key), so they keep its
+# name in every project.
+EXCLUDED='^(\./)?(tools/rename-project\.sh|tools/setup\.sh|tools/installer/CreateProject\.php|docs/create-project\.md|LICENSE|docs/modules\.md|modules/.*|tests/Support/Fixtures/modules/.*)$'
 
 # Files with a placeholder on a line that is not a framework pointer.
 FILES=""
