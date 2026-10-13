@@ -12,10 +12,10 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
 ### Changed
 - **The backronym:** Waffle now stands for **W**eb **A**pplication **F**oundation **F**or **L**ay **E**ngineers.
-
-## [0.1.0] - 2026-10-12
 
 ### Added
 - **`tools/setup.sh`, a guided first-time setup**: checks the machine and says how to install what is missing, asks for the slug, display name and hostname (suggesting each), renames, refreshes both lock files without starting the project, offers the first commit, and prints what is next. Every answer is also a flag, and it is safe to re-run. Runs on macOS (stock bash 3.2), Linux and WSL2; refuses native Windows shells with a pointer to WSL2.
