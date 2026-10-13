@@ -31,6 +31,12 @@ function renameFixture(): string
         'docs/modules.md',
         'modules/README.md',
         'tests/Support/Fixtures/modules/fixture-notes/MODULE.md',
+        'tools/module.sh',
+        'tools/module/Command.php',
+        'docs/module-command.md',
+        'tests/Unit/ModuleTool/CommandTest.php',
+        'tests/Unit/ModuleCommandTest.php',
+        'tests/Support/ModuleFixtures.php',
     ] as $path) {
         is_dir(dirname($dir . '/' . $path)) || mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
@@ -100,7 +106,7 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
     $leftovers = [];
 
     foreach (treeContents($this->dir) as $path => $contents) {
-        if (in_array($path, ['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md'], true)) {
+        if (in_array($path, ['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md', 'tools/module.sh', 'tools/module/Command.php', 'docs/module-command.md', 'tests/Unit/ModuleTool/CommandTest.php', 'tests/Unit/ModuleCommandTest.php', 'tests/Support/ModuleFixtures.php'], true)) {
             continue;
         }
 
@@ -218,7 +224,7 @@ it('never touches the installer, its autoload entry, this document, the licence 
     $after = treeContents($this->dir);
     $composer = json_decode($after['composer.json'], true);
 
-    foreach (['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md'] as $path) {
+    foreach (['tools/rename-project.sh', 'tools/setup.sh', 'tools/installer/CreateProject.php', 'docs/create-project.md', 'LICENSE', 'docs/modules.md', 'modules/README.md', 'tests/Support/Fixtures/modules/fixture-notes/MODULE.md', 'tools/module.sh', 'tools/module/Command.php', 'docs/module-command.md', 'tests/Unit/ModuleTool/CommandTest.php', 'tests/Unit/ModuleCommandTest.php', 'tests/Support/ModuleFixtures.php'] as $path) {
         expect($after[$path])->toBe($before[$path], $path);
     }
 
@@ -278,6 +284,32 @@ it('sets the project up from flags alone, without a terminal (13)', function ():
     expect($code)->toBe(0, $err)
         ->and($out)->toContain('renamed: slug acme, name "Acme Ops", host ops.acme.com')
         ->and(json_decode((string) file_get_contents($this->dir . '/composer.json'), true)['name'])->toBe('acme/acme');
+});
+
+it('prints how to get iron when it is missing, and never fetches or installs it (docs/module-command.md, 35)', function (): void {
+    $line = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/treehousetim/waffle-iron/main/install.sh)"';
+    mkdir($this->dir . '/bin');
+    // A curl that leaves a mark if anything runs it.
+    file_put_contents($this->dir . '/bin/curl', "#!/bin/sh\ntouch \"\$(dirname \"\$0\")/curl-ran\"\n");
+    chmod($this->dir . '/bin/curl', 0o755);
+
+    [$code, $out, $err] = runSetup($this->dir, ['--slug', 'acme', '--name', 'Acme Ops', '--host', 'ops.acme.com', '--skip-locks', '--no-git'], ['PATH' => $this->dir . '/bin:' . getenv('PATH')]);
+
+    expect($code)->toBe(0, $err)
+        ->and($out)->toContain("  {$line}\n")
+        ->and(file_exists($this->dir . '/bin/curl-ran'))->toBeFalse()
+        ->and(substr_count((string) file_get_contents($this->dir . '/tools/setup.sh'), 'curl'))->toBe(1);
+});
+
+it('says nothing about iron when it is already installed', function (): void {
+    mkdir($this->dir . '/bin');
+    file_put_contents($this->dir . '/bin/iron', "#!/bin/sh\n");
+    chmod($this->dir . '/bin/iron', 0o755);
+
+    [$code, $out] = runSetup($this->dir, ['--slug', 'acme', '--name', 'Acme Ops', '--host', 'ops.acme.com', '--skip-locks', '--no-git'], ['PATH' => $this->dir . '/bin:' . getenv('PATH')]);
+
+    expect($code)->toBe(0)
+        ->and($out)->not->toContain('install.sh');
 });
 
 it('takes the suggestions with --yes', function (): void {

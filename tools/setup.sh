@@ -352,3 +352,14 @@ cat <<EOF
   3. Before your first deploy: sign up for the services in README.md, then
      follow docs/fresh-install.md.
 EOF
+
+# Waffle Iron's launcher (docs/module-command.md, 35): say how to get it, and
+# nothing more. Installing software on someone's machine is theirs to choose.
+if ! command -v iron >/dev/null 2>&1; then
+    cat <<'EOF'
+
+To add ready-made features from Waffle Iron (docs/modules.md), install its
+`iron` command once on this machine, then run `iron use <module>` in the app:
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/treehousetim/waffle-iron/main/install.sh)"
+EOF
+fi

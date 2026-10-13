@@ -35,6 +35,7 @@
     "autoload-dev": {
         "psr-4": {
             "Installer\\": "tools/installer/",
+            "ModuleTool\\": "tools/module/",
             "Tests\\": "tests/"
         }
     },

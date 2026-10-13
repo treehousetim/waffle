@@ -32,6 +32,7 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
 | [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
 | [docs/settings.md](docs/settings.md) | Adding a setting, or wanting a worked example of a slice | The settings table, the Settings page, and how to add a setting. |
+| [docs/module-command.md](docs/module-command.md) | Adding a module from [Waffle Iron](https://github.com/treehousetim/waffle-iron) | `./tools/module.sh` (and `iron`): search the catalogue, install a module with every check made for you, record it once the suite is green, and verify what is installed. Its failure list. |
 | [docs/modules.md](docs/modules.md) | Adding a ready-made feature, or sharing one you built | [Waffle Iron](https://github.com/treehousetim/waffle/blob/main/docs/modules.md) modules: what one must contain, how an agent installs and updates it, how it is proven. They are listed in [Waffle Iron](https://github.com/treehousetim/waffle-iron); the first is [short links](https://github.com/treehousetim/waffle-short-links). |
 | [docs/supply-chain.md](docs/supply-chain.md) | Adding or updating a package | How npm and Composer are kept from hijacked releases: the week-long cooldown, no install scripts or unnamed plugins, containers, signature and vulnerability checks. |
 | [docs/releasing.md](docs/releasing.md) | Cutting a release | `./tools/release.sh`, how versions work for the framework and for an app, and its failure list. |
@@ -158,6 +159,18 @@ Tests read `.env.testing` only and never touch Doppler. End-to-end tests write t
 The dev server runs on 5173 and proxies `/api`, `/cron` and `/webhooks` to the stack on 8080, so use 5173 while working on the UI and 8080 to check the built bundle. `./tools/npm.sh run build` empties `src/public/assets` and `src/public/index.html` and writes the hashed bundle there; both are gitignored build output.
 
 `./tools/npm.sh` is the only way npm is run: in a throwaway container, with install scripts off, and taking only versions at least a week old, because hijacked releases are usually caught within days. [docs/supply-chain.md](docs/supply-chain.md) explains each layer.
+
+## Adding a ready-made feature
+
+Modules are features other people have written down for any [Waffle](https://github.com/treehousetim/waffle) app, listed in [Waffle Iron](https://github.com/treehousetim/waffle-iron):
+
+```bash
+./tools/module.sh search short           # what is there
+./tools/module.sh use short-links        # check it, show you what it adds, then hand it to your agent
+./tools/module.sh verify                 # are the installed ones still what the catalogue lists?
+```
+
+`use` fetches exactly the files a person reviewed, refuses anything that does not check out (hash, hidden characters, symlinks, format), and asks you before anything is built; your agent then builds it and `record` writes `modules.json` only once the whole suite is green. [docs/module-command.md](docs/module-command.md) has every check, and [Waffle Iron](https://github.com/treehousetim/waffle-iron)'s `iron` command runs the same thing from anywhere inside the app.
 
 ## Going to production
 

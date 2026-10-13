@@ -308,7 +308,10 @@ if [ "${PEST_ARGS[*]-}" = "--group=frontend" ]; then
     echo "    (skipped: --group=frontend is the Node suite only)"
     STATUS=0
 else
-    docker compose exec -T php php -d memory_limit=2G vendor/bin/pest ${RUN_ARGS[@]+"${RUN_ARGS[@]}"}
+    # pcov instruments only pcov.directory, which it otherwise guesses as src/:
+    # tools/module/ (docs/module-command.md) is held to 100% too, so watch the
+    # whole repository except vendor/, which nobody's coverage includes.
+    docker compose exec -T php php -d memory_limit=2G -d pcov.directory=/var/www -d 'pcov.exclude=~/vendor/~' vendor/bin/pest ${RUN_ARGS[@]+"${RUN_ARGS[@]}"}
     STATUS=$?
 fi
 set -e

@@ -68,9 +68,13 @@ Then three things that describe Waffle itself rather than a placeholder:
 
 Any line containing `treehousetim/waffle` is left alone, so that link, and
 anything else pointing at the framework, survives. This document, both scripts,
-the installer, `LICENSE`, `docs/modules.md`, everything in `modules/` and
-`ModulesTest`'s fixture module (`tests/Support/Fixtures/modules/`) are never
-touched: modules name the framework on purpose.
+the installer, `LICENSE`, `docs/modules.md`, everything in `modules/`,
+`ModulesTest`'s fixture module (`tests/Support/Fixtures/modules/`), and the
+module command with its tests (`tools/module.sh`, `tools/module/`,
+`docs/module-command.md`, `tests/Unit/ModuleTool/`,
+`tests/Unit/ModuleCommandTest.php`, `tests/Support/ModuleFixtures.php`) are
+never touched: they name the framework, Waffle Iron and `.waffle/` on
+purpose.
 
 ## Failure list
 

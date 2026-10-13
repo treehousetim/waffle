@@ -28,9 +28,10 @@
     </testsuites>
 
     <!--
-        Coverage source = src/app, minus the code that only exists to reach the
-        network and minus Phinx migrations/seeds (exercised by running them, not
-        by asserting on them).
+        Coverage source = src/app, and tools/module (the module command's checks,
+        docs/module-command.md), minus the code that only exists to reach the
+        network, the module command's three-line entry point, and Phinx
+        migrations/seeds (exercised by running them, not by asserting on them).
 
         External API clients live in Libraries/Clients precisely so they can be
         excluded as a whole directory; do not put coverable logic there.
@@ -48,10 +49,13 @@
     <source ignoreIndirectDeprecations="true">
         <include>
             <directory suffix=".php">src/app</directory>
+            <directory suffix=".php">tools/module</directory>
         </include>
         <exclude>
             <directory suffix=".php">src/app/phinx</directory>
             <directory suffix=".php">src/app/Libraries/Clients</directory>
+            <directory suffix=".php">tools/module/Clients</directory>
+            <file>tools/module/run.php</file>
         </exclude>
     </source>
 
