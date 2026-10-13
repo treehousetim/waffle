@@ -24,11 +24,14 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD:-waffle}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
     ports:
-      # 3308 on the host to stay clear of any local MySQL/MariaDB on 3306.
+      # For a desktop database client only: the app, the tests and the backup
+      # all reach MariaDB inside Docker. 11020 because it is unlikely to be in
+      # use, by another MySQL/MariaDB on 3306 or another project's stack.
       # Loopback only: the development credentials are the defaults above, and
       # 0.0.0.0 would offer them to everybody on the same network. Override
-      # DB_HOST_PORT in your shell (not in Doppler) if 3308 is taken.
-      - "127.0.0.1:${DB_HOST_PORT:-3308}:3306"
+      # DB_HOST_PORT in your shell if 11020 is taken. Production publishes
+      # nothing (docker-compose.prod.yml).
+      - "127.0.0.1:${DB_HOST_PORT:-11020}:3306"
     volumes:
       - ./docker/data/mysql:/var/lib/mysql
     healthcheck:

@@ -102,9 +102,9 @@ Optional:
 ## First run
 
 ```bash
-# 1. Start the stack (db on 127.0.0.1:3308, php-fpm, Caddy on 8080). No secrets
+# 1. Start the stack (db on 127.0.0.1:11020, php-fpm, Caddy on 8080). No secrets
 #    needed: every value has a local default in docker-compose.yml.
-#    If something already owns a port: HTTP_PORT=8090 DB_HOST_PORT=3309 docker compose up -d
+#    If something already owns a port: HTTP_PORT=8090 DB_HOST_PORT=11021 docker compose up -d
 docker compose up -d
 
 # 2. Create the schema.
@@ -145,7 +145,7 @@ Tests read `.env.testing` only and never touch Doppler. End-to-end tests write t
 | Service | URL / port | Override |
 |---|---|---|
 | Caddy (the app) | http://localhost:8080 | `HTTP_PORT` |
-| MariaDB | 127.0.0.1:3308 | `DB_HOST_PORT` |
+| MariaDB | 127.0.0.1:11020, for a desktop database client (the app does not use it; not published in production) | `DB_HOST_PORT` |
 | Vite dev server | http://localhost:5173 | |
 
 ## Frontend dev loop

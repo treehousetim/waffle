@@ -12,6 +12,9 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+### Changed
+- **The database port.** Production no longer publishes MariaDB at all: the app, the tests and the nightly backup all reach it inside Docker. Locally it moves from 3308 to 11020 (still loopback only, `DB_HOST_PORT` to override), out of the way of other MySQL/MariaDB servers and other projects' stacks.
+
 ## [0.1.0] - 2026-10-13
 
 ### Changed

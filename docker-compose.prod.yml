@@ -12,9 +12,12 @@
 
 services:
   db:
-    # Bound to loopback only: nothing outside the server may reach MariaDB.
-    ports: !override
-      - "127.0.0.1:3306:3306"
+    # Not published at all. The app reaches it as db:3306 on the Compose
+    # network, and the backup runs inside it with `docker compose exec`; a
+    # published port would only be one more thing listening. For a shell:
+    #   doppler run -- docker compose -f docker-compose.yml -f docker-compose.prod.yml exec db mariadb -u root -p
+    # !reset clears the base file's list instead of merging with it.
+    ports: !reset []
     restart: unless-stopped
 
   php:

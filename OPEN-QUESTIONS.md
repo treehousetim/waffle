@@ -8,7 +8,7 @@ Sparse list. One line each where possible. When answered, move it to `RESOLVED_Q
 - **Three levels** — owner, administrator, user — and the grid in `docs/access-levels.md`. Rename or add levels before anything is built on them.
 - **Display timezone:** the `display_timezone` setting defaults to `UTC`. Set it to where the team is.
 - **Seeded dev credentials:** `owner@`, `admin@`, `user@example.test`, password `local-dev-password` unless `SEED_PASSWORD` is set.
-- **Caddy's host port** is `${HTTP_PORT:-8080}` and MariaDB's `${DB_HOST_PORT:-3308}`.
+- **Caddy's host port** is `${HTTP_PORT:-8080}` and MariaDB's `${DB_HOST_PORT:-11020}` (local only; production publishes no database port).
 
 ## Needs a decision before production
 - **Off-site backups.** `tools/backup-prod-db.sh` keeps 14 nightly dumps on the server itself, which does not survive losing the server. Where should copies go (object storage in another region, with a key limited to one bucket)?
