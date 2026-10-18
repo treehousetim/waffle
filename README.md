@@ -26,6 +26,8 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | Document | Read it when | What it covers |
 | --- | --- | --- |
 | [AGENTS.md](AGENTS.md) | Before writing any code | The rulebook: stack, layout, layering rules, SQL conventions, testing rules, secrets, the release flow. Written to be enough on its own, for people and AI agents alike. |
+| [docs/setups.md](docs/setups.md) | Before starting a project | The ways to build with Waffle: app only, app + site (one server or two), back office + site, a static site, one app with several sites, API only; what each needs and what is built today. |
+| [docs/content-model.md](docs/content-model.md) | Publishing anything to a site | **Proposal:** the tables for records a site publishes: publishable columns, slug history, terms, media, form submissions, sites; and the site API they serve. |
 | [docs/create-project.md](docs/create-project.md) | Starting a project from [Waffle](https://github.com/treehousetim/waffle) | What `composer create-project` asks, what the rename touches and leaves alone, and its failure list. |
 | [docs/https.md](docs/https.md) | Launching on your own hostname, or HTTPS is not coming up | How Caddy gets the certificate, the DNS check, the certificate store, and its failure list. |
 | [docs/fresh-install.md](docs/fresh-install.md) | Putting it on a server for the first time | From nothing to production: Doppler configs, the droplet, the certificate, the GitHub environment, the first release. |
