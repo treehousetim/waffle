@@ -12,6 +12,8 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-19
+
 ### Added
 - **Waffle Iron modules** (docs/modules.md): a feature written down so an AI agent can build it into any Waffle app. A module needs a `MODULE.md` (the feature in depth, its roles and permissions, its migrations) and a `MODULE-TEST.md` (desired outcomes and how to test them); reference code and tests are optional. It can be a directory, a `.zip` or a single `.module.md` prompt file. Modules live in their own repositories and are listed in [Waffle Iron](https://github.com/treehousetim/waffle-iron). Drop one into `modules/` and `ModulesTest` checks it against the format, including that every failure is covered by an outcome, that it holds no symlinks or non-ASCII file names, and that a directory module hashes the same everywhere (the hash rule is in the spec); a fixture module keeps the checks running when `modules/` is empty.
 - **The first module, [short links](https://github.com/treehousetim/waffle-short-links)** (its own repository, listed in Waffle Iron): `yoursite.com/go/<code>` redirects with daily click counts and nothing tracked about who clicks; pause, expiry, safe generated codes, and refusal of open-redirect targets. Specified, not yet proven on a Waffle version.
