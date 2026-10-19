@@ -155,6 +155,18 @@ ${ORIGIN_LINE}
 CHANGELOG
 echo "  started VERSION at 0 and a fresh CHANGELOG.md"
 
+# 19. Tests that only make sense in the framework stay with it: CreateProjectTest
+# runs this script against the framework's own files and placeholders, which a
+# project no longer has, so it would fail in every project.
+if [ -f tests/Unit/CreateProjectTest.php ]; then
+    rm -f tests/Unit/CreateProjectTest.php
+    if [ -f tests/Pest.php ]; then
+        sed -i.rename-bak "/'Unit\/CreateProjectTest\.php',/d" tests/Pest.php
+        rm -f tests/Pest.php.rename-bak
+    fi
+    echo "  removed the framework's own setup tests (tests/Unit/CreateProjectTest.php)"
+fi
+
 echo
 echo "Done. Next:"
 echo "  - refresh composer.lock, whose hash covers the project name:"

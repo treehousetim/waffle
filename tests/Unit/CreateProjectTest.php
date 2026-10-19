@@ -37,6 +37,8 @@ function renameFixture(): string
         'tests/Unit/ModuleTool/CommandTest.php',
         'tests/Unit/ModuleCommandTest.php',
         'tests/Support/ModuleFixtures.php',
+        'tests/Pest.php',
+        'tests/Unit/CreateProjectTest.php',
     ] as $path) {
         is_dir(dirname($dir . '/' . $path)) || mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
@@ -156,6 +158,36 @@ it('starts the project\'s own release stream, recording where it started (18)', 
         ->and($changelog)->toEndWith("## [Unreleased]\n")
         // None of the framework's own history comes along.
         ->and($changelog)->not->toMatch('/^## \[\d/m');
+});
+
+it('leaves the framework\'s own setup tests behind, so a project passes its own tests (19)', function (): void {
+    runRename($this->dir, ['acme', 'Acme Ops', 'ops.acme.com']);
+
+    expect(file_exists($this->dir . '/tests/Unit/CreateProjectTest.php'))->toBeFalse()
+        ->and(file_get_contents($this->dir . '/tests/Pest.php'))->not->toContain('CreateProjectTest')
+        ->and(file_get_contents($this->dir . '/tests/Pest.php'))->toContain("'Unit/ReleaseTest.php',");
+});
+
+it('finds no placeholder written where the rename cannot reach it (19)', function (): void {
+    // The rename replaces the names as plain text. Escaped, as in a regular
+    // expression, they are missed and the test fails in every project.
+    $root = dirname(__DIR__, 2);
+    $offenders = [];
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/tests', FilesystemIterator::SKIP_DOTS));
+
+    foreach ($files as $file) {
+        $path = substr((string) $file, strlen($root) + 1);
+
+        if ($path === 'tests/Unit/CreateProjectTest.php' || !str_ends_with($path, '.php')) {
+            continue;
+        }
+
+        if (preg_match('/waffle\\\\\.example|treehousetim\\\\\\\\\/waffle/', (string) file_get_contents((string) $file))) {
+            $offenders[] = $path;
+        }
+    }
+
+    expect($offenders)->toBe([]);
 });
 
 it('refuses a slug that is not a usable database name, and touches nothing (4, 8)', function (string $slug): void {

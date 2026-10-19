@@ -59,5 +59,5 @@ it('deploys only an app\'s release tags, and never from the framework\'s own rep
     $workflow = projectFile('.github/workflows/deploy.yml');
 
     expect($workflow)->toContain('if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then')
-        ->and($workflow)->toMatch("/^    if: github\\.repository != 'treehousetim\\/waffle'$/m");
+        ->and(explode("\n", $workflow))->toContain("    if: github.repository != 'treehousetim/waffle'");
 });

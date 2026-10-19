@@ -12,6 +12,9 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+### Fixed
+- **A project made from Waffle passes its own tests.** Found by the first real project, KAW Meetup: `CreateProjectTest` runs the rename against the framework's own files and placeholders, which a project no longer has, so the rename now removes it (failure 19 in docs/create-project.md); `ReleaseTest` wrote the framework's repository name escaped, where the rename changed it, and now writes it plainly; a test forbids escaped placeholders. Proven on a fresh project: its whole gate passes. Porting: delete `tests/Unit/CreateProjectTest.php` and its line in `tests/Pest.php`.
+
 ### Changed
 - **The Compose project is named for the slug** (`name:` in `docker-compose.yml`), so containers and volumes are the project's wherever it is cloned, not the folder's. Porting: add `name: <your slug>` at the top of `docker-compose.yml`; on a server the folder is already `/opt/<slug>`, so volume names do not change.
 

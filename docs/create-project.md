@@ -116,3 +116,8 @@ against a scratch copy of the files they edit.
 18. The new project inherits the framework's `VERSION` and changelog, so its
     first release is numbered after the framework's and its changelog tells the
     framework's history instead of its own.
+
+19. A project made from Waffle fails its own tests, because tests that only make
+    sense in the framework came with it. → The rename removes them
+    (`tests/Unit/CreateProjectTest.php`), and no test writes a placeholder in a
+    form the rename cannot reach.
