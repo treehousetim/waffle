@@ -230,9 +230,12 @@ fi
 # 5. Bring the stack up.
 #
 # --remove-orphans so a service deleted from the compose files does not linger.
+# --scale worker=0 stops the queue's worker (letting the job in hand finish)
+# so that no job runs while the migrations below change the schema
+# (docs/queue.md, 12); it is started again after php restarts.
 # ---------------------------------------------------------------------------
-echo "==> starting containers"
-"${COMPOSE[@]}" up -d --remove-orphans
+echo "==> starting containers (the queue worker stays stopped until after the migrations)"
+"${COMPOSE[@]}" up -d --remove-orphans --scale worker=0
 
 # ---------------------------------------------------------------------------
 # 6. Wait for MariaDB before migrating.
@@ -313,6 +316,10 @@ echo "==> restarting php (clears opcache)"
 # Do not call the deploy done while php-fpm is still starting: Caddy would
 # answer 502 for however long that takes.
 wait_for_php
+
+# The queue's worker, on the new code and the new schema (docs/queue.md).
+echo "==> starting the queue worker"
+"${COMPOSE[@]}" up -d --no-deps worker
 
 # A graceful reload picks up a changed Caddyfile without dropping a connection.
 # `up -d` already recreated the container if its image or mounts changed.

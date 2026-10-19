@@ -27,6 +27,9 @@ function guardedRoutes(): array
         'GET /api/hello' => Permission::Home,
         'GET /api/settings' => Permission::SettingsView,
         'PUT /api/settings' => Permission::SettingsEdit,
+        'GET /api/queue' => Permission::QueueManage,
+        'POST /api/queue/jobs/{id}/retry' => Permission::QueueManage,
+        'DELETE /api/queue/jobs/{id}' => Permission::QueueManage,
     ];
 }
 

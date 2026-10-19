@@ -56,19 +56,20 @@ it('renders the crontab with the header file and no heartbeat', function (): voi
     [$code, $out] = runScript('deploy/render-crontab.sh', ['deploy/crontab', '/opt/app/.deploy/cron-header']);
 
     expect($code)->toBe(0)
-        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/health >/dev/null 2>&1' . "\n")
+        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/health >/dev/null 2>&1 && ')
+        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/queue >/dev/null 2>&1' . "\n")
         ->and($out)->not->toContain('__CRON_HEADER_FILE__')
         ->and($out)->not->toContain('__HEARTBEAT__');
 });
 
-it('adds the heartbeat ping after the health check when there is one', function (): void {
+it('adds the heartbeat ping after the health and queue checks when there is one', function (): void {
     [$code, $out] = runScript(
         'deploy/render-crontab.sh',
         ['deploy/crontab', '/h', 'https://hc-ping.com/abc-123'],
     );
 
     expect($code)->toBe(0)
-        ->and($out)->toContain('/cron/health >/dev/null 2>&1 && curl -fsS -m 10 -o /dev/null https://hc-ping.com/abc-123');
+        ->and($out)->toContain('/cron/queue >/dev/null 2>&1 && curl -fsS -m 10 -o /dev/null https://hc-ping.com/abc-123');
 });
 
 it('refuses a heartbeat URL that could be shell in a crontab', function (string $url): void {

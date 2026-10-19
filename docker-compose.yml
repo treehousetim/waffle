@@ -60,7 +60,9 @@ services:
     #     reaches FPM workers (the default, clear_env = yes, would not)
     #   - `docker compose exec` inherits the container environment, so phinx
     #     sees these during migrations without any extra plumbing
-    environment:
+    #
+    # The worker service reads the same block (the &app_environment anchor).
+    environment: &app_environment
       # composer runs as root in this container; skip its interactive warning.
       COMPOSER_ALLOW_SUPERUSER: "1"
 
@@ -94,6 +96,31 @@ services:
       db:
         condition: service_healthy
     command: sh -c "composer install --no-interaction && exec php-fpm"
+
+  worker:
+    # The queue's worker (docs/queue.md): the same image and environment as
+    # php, running src/cli/worker.php. It exits after a share of jobs or
+    # memory, and `restart` starts a fresh one; SIGTERM lets the job in hand
+    # finish within stop_grace_period. It waits for php's composer install.
+    build:
+      context: ./docker/php
+      args:
+        PHP_INI: ${PHP_INI:-php.ini}
+    working_dir: /var/www
+    environment: *app_environment
+    volumes:
+      - .:/var/www
+      - vendor_data:/var/www/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+      php:
+        condition: service_started
+    command: sh -c "until [ -f vendor/autoload.php ]; do sleep 2; done; exec php src/cli/worker.php"
+    restart: unless-stopped
+    # The php:fpm image stops with SIGQUIT; the worker is not php-fpm.
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
 
   caddy:
     # The web server (docker/caddy/Caddyfile, docs/https.md). The same file

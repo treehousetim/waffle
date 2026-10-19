@@ -22,6 +22,7 @@ the two lower levels are listed there.
 | `home` | The home page (`GET /api/hello`) | ✓ | ✓ | ✓ |
 | `settings-view` | Read the Settings page (`GET /api/settings`) | ✓ | ✓ | |
 | `settings-edit` | Change settings (`PUT /api/settings`) | ✓ | | |
+| `queue-manage` | See the queue and its failed jobs, and retry or discard them (`/api/queue`, docs/queue.md) | ✓ | ✓ | |
 
 Keep this table and `tests/Unit/Domain/Auth/PermissionsTest.php` saying the
 same thing; change both together.

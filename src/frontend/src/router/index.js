@@ -29,6 +29,12 @@ export const routes = [
     meta: { title: 'Settings', permission: 'settings-view', nav: true }
   },
   {
+    path: '/queue',
+    name: 'queue',
+    component: () => import('@/views/QueueView.vue'),
+    meta: { title: 'Queue', permission: 'queue-manage', nav: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: { name: 'home' }
   }

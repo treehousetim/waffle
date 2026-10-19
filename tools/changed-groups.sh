@@ -39,6 +39,9 @@ for file in $changed; do
         src/app/Domain/Settings/*|tests/Unit/Domain/Settings/*|tests/Feature/SettingsTest.php)
             groups="$groups settings" ;;
 
+        src/app/Domain/Queue/*|src/app/Libraries/Queue/*|tests/Unit/Domain/Queue/*|tests/Unit/Libraries/Queue/*|tests/Feature/QueueTest.php|tests/Schema/QueueTransactionTest.php|tests/Unit/WorkerServiceTest.php|src/cli/worker.php)
+            groups="$groups queue" ;;
+
         # -- the frontend's Node suite ---------------------------------------
         src/frontend/src/utils/*|src/frontend/test/*) groups="$groups frontend" ;;
 

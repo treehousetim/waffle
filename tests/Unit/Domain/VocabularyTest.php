@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Domain\Queue\JobStatus;
+use App\Domain\Queue\RunOutcome;
 use App\Domain\Settings\SettingType;
 use Tests\TestCase;
 
@@ -26,4 +28,20 @@ it('has exactly one types row per enum case', function (string $enum, string $gr
     expect($rows)->toBe($cases);
 })->with([
     'setting types' => [SettingType::class, 'setting_type'],
+    'job statuses' => [JobStatus::class, 'job_status'],
+    'job run outcomes' => [RunOutcome::class, 'job_run_outcome'],
 ]);
+
+it('has exactly one `job` types row per registered job handler (docs/queue.md, 11)', function (): void {
+    // The production definitions, not the test container's: the test job is
+    // registered only there, and its row only inside the tests that use it.
+    /** @var array<string,mixed> $definitions */
+    $definitions = require dirname(__DIR__, 3) . '/src/config/container.php';
+    $registered = $definitions['queue.job_types'];
+    sort($registered);
+
+    $rows = TestCase::pdo()->query("SELECT types_name FROM types WHERE types_group = 'job' ORDER BY types_name")
+        ->fetchAll(PDO::FETCH_COLUMN);
+
+    expect($rows)->toBe($registered);
+});

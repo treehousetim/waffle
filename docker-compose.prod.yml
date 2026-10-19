@@ -50,6 +50,21 @@ services:
     command: sh -c "exec php-fpm"
     restart: unless-stopped
 
+  worker:
+    # As php: the production php.ini, the code shipped in the release with
+    # vendor/ inside it, production settings. deploy.sh stops it before
+    # migrations and starts it after php restarts (docs/queue.md, 12).
+    build:
+      args:
+        PHP_INI: php.prod.ini
+    environment:
+      APP_ENV: production
+      APP_DEBUG: ""
+    volumes: !override
+      - .:/var/www
+    command: sh -c "exec php src/cli/worker.php"
+    restart: unless-stopped
+
   caddy:
     # The hostname Caddy serves and gets the certificate for. Written once, by
     # tools/rename-project.sh; deploy.sh reads this line to check DNS before

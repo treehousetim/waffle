@@ -99,6 +99,17 @@ uses()->group('settings')->in(
     'Feature/SettingsTest.php',
 );
 
+// The queue slice (docs/queue.md).
+uses()->group('queue')->in(
+    'Unit/Domain/Queue',
+    'Unit/Libraries/Queue',
+    'Unit/Models/JobRepositoryTest.php',
+    'Feature/QueueTest.php',
+    'Feature/E2E/QueueJourneyTest.php',
+    'Schema/QueueTransactionTest.php',
+    'Unit/WorkerServiceTest.php',
+);
+
 // End-to-end tests: a whole feature through the router, ending in an artifact
 // under coverage/e2e/ (see tests/Support/E2EArtifact.php).
 uses()->group('e2e')->in(

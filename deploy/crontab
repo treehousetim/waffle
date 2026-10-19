@@ -27,9 +27,11 @@
 MAILTO=""
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# The cron path and the database, end to end. Every five minutes because it is
-# what pings the heartbeat: the outside service alerts when the pings stop.
-*/5 * * * * curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/health >/dev/null 2>&1__HEARTBEAT__
+# The cron path and the database, end to end, then the queue (docs/queue.md):
+# finished jobs pruned, and a 503 if a due job has waited too long because the
+# worker stopped. Every five minutes because it is what pings the heartbeat:
+# the outside service alerts when the pings stop, so a stopped worker alerts too.
+*/5 * * * * curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/health >/dev/null 2>&1 && curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/queue >/dev/null 2>&1__HEARTBEAT__
 
 # The nightly database dump (tools/backup-prod-db.sh keeps the newest 14). Its
 # output is kept, because "did last night's backup work" has to be answerable.

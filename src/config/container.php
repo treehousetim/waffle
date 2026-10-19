@@ -251,4 +251,14 @@ foreach (glob(__DIR__ . '/container/*.php') ?: [] as $fragment) {
     $definitions += $slice;
 }
 
+/*
+ * The queue's job types (docs/queue.md): every definition keyed `job:<type>`
+ * is that job's handler. Gathered here, after every fragment, so a slice adds
+ * a job by defining its handler in its own fragment and nowhere else.
+ */
+$definitions['queue.job_types'] = array_values(array_map(
+    static fn (string $key): string => substr($key, strlen('job:')),
+    array_filter(array_keys($definitions), static fn (string $key): bool => str_starts_with($key, 'job:')),
+));
+
 return $definitions;

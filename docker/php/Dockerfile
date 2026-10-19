@@ -20,7 +20,8 @@ RUN set -eux; \
         git \
         unzip \
         libzip-dev; \
-    docker-php-ext-install -j"$(nproc)" pdo_mysql zip; \
+    docker-php-ext-install -j"$(nproc)" pdo_mysql zip pcntl; \
+    php -m | grep -qi '^pcntl$'; \
     php -m | grep -qi '^mbstring$'; \
     rm -rf /var/lib/apt/lists/*
 

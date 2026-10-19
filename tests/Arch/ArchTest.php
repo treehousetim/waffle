@@ -50,6 +50,10 @@ arch('Controllers do not talk to a vendor SDK directly')
     ->expect('App\Controllers')
     ->not->toUse($vendorSdks);
 
+arch('Controllers enqueue work; they never run a job themselves (docs/queue.md, 18)')
+    ->expect('App\Controllers')
+    ->not->toUse(['App\Libraries\Queue\Worker', 'App\Domain\Queue\JobHandler']);
+
 arch('Controllers all extend BaseController')
     ->expect('App\Controllers')
     ->classes()

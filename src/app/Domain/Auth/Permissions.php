@@ -18,6 +18,7 @@ final class Permissions
         'administrator' => [
             Permission::Home,
             Permission::SettingsView,
+            Permission::QueueManage,
         ],
         'user' => [
             Permission::Home,

@@ -21,4 +21,5 @@ enum Permission: string
     case Home = 'home';
     case SettingsView = 'settings-view';
     case SettingsEdit = 'settings-edit';
+    case QueueManage = 'queue-manage';
 }
