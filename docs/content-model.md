@@ -1,8 +1,11 @@
 # The content model
 
-**Status: proposal.** No table here exists yet. This is the shape every app
-will use for anything a site publishes (docs/setups.md, setups 2 to 4), so
-that agents build it the same way each time and Waffle Site can rely on it.
+**Status: decided 2026-10-19, not built.** No table here exists yet. It ships
+as a **Waffle Iron module** (an app without a site never needs it), built on
+the skeleton's queue (docs/queue.md). This is the shape every app uses for
+anything a site publishes (docs/setups.md, setups 2 to 4), so that agents
+build it the same way each time and Waffle Site can rely on it. The decisions
+are recorded in RESOLVED_QUESTIONS.md.
 It follows AGENTS.md §6: every column prefixed with its table's name,
 statuses as foreign keys into `types`, money in cents, times in UTC.
 
@@ -12,23 +15,38 @@ of the shape stays.
 
 ## Principles
 
-1. **Code owns pages; the database owns records.** A page that exists once
-   (home, about, pricing) is an `.astro` file in the site, written and
-   reviewed like code. The database holds the records that become many pages
-   (properties, towns, services, people) and the text that belongs to them.
-   There is no `pages` table and no page builder.
-2. **One table per record type**, carrying the publishable columns below and
+1. **Code owns layout; the database owns content.** The site's templates and
+   components are code, written and reviewed in the site's repository. What
+   staff edit is content in the database: `pages` and `posts`, which every
+   app with the module has, and the app's own record types (properties,
+   towns, services, people). A page that never changes without a developer
+   (a legal notice, a one-off landing page) may stay an `.astro` file.
+2. **Each record type has one body format.** `posts` are Markdown (no raw
+   HTML): a blog post is prose. `pages`, and any record type whose pages need
+   more than prose, are **blocks**: an ordered list of typed blocks from one
+   fixed set (below), each rendered on the site by its own component. A type
+   never mixes the two.
+3. **One table per record type**, carrying the publishable columns below and
    its own fields. No generic "entries" table with key/value fields: each type
    gets real columns, real constraints and its own parser on the site.
-3. **Publishing is a state machine**, `draft` → `published` → `retired`, in
-   `Domain/` (AGENTS.md §4). Publishing checks the publish bar, the same
-   minimums the site's build enforces (Waffle Site's docs/data-pages.md), so
-   staff see why a record cannot go live before the site refuses it.
-4. **A slug is forever.** Every slug a record has had is kept; none is ever
+4. **Publishing is a state machine**, `draft` → `published` → `retired`, in
+   `Domain/` (AGENTS.md §4). **The publish bar lives in the app**: its
+   minimums are app settings per record type, checked when staff publish, so
+   they see why a record cannot go live. The site API sends only records that
+   passed, and sends the bar's numbers with them, so the site's build checks
+   the same numbers instead of keeping its own (Waffle Site's
+   docs/data-pages.md, decision 5).
+5. **Every publish is kept.** Each publish writes a revision: a snapshot of
+   the record's content, who published it and when. Restoring is publishing
+   an earlier snapshot again.
+6. **A slug is forever.** Every slug a record has had is kept; none is ever
    given to another record. The site turns old slugs into redirects.
-5. **Media is described when it is uploaded**: alt text, credit and licence
-   are fields, required before a record using the image can publish.
-6. **Changes are told, not polled.** A change to published content queues a
+7. **Media is described when it is uploaded**: alt text, credit and licence
+   are fields, required before a record using the image can publish. Files
+   live in **object storage from day one** (S3-compatible: DigitalOcean
+   Spaces out of the box), behind a `StoragePort`; development and tests use
+   a filesystem adapter.
+8. **Changes are told, not polled.** A change to published content queues a
    change notice for the site (AGENTS.md §4), carried by the queue
    (docs/queue.md).
 
@@ -45,7 +63,7 @@ For a record table `<t>` (here `properties`):
 | `<t>_status_id` | FK → `types` (`publish_status`: draft, published, retired) | set only by the state machine |
 | `<t>_title` | VARCHAR(150) | the page's `<h1>` and the start of its title |
 | `<t>_summary` | VARCHAR(300) | the source of the page's description and of cards that list it |
-| `<t>_body` | MEDIUMTEXT | the record's main text, as Markdown without raw HTML; the site renders it |
+| `<t>_body` | MEDIUMTEXT or JSON | the record's content, in its type's one format: Markdown without raw HTML (`posts`), or a JSON array of blocks (`pages` and rich types), checked by a parser in `Domain/` on every save |
 | `<t>_seo_title` | VARCHAR(60), null | overrides the page title when set |
 | `<t>_seo_description` | VARCHAR(160), null | overrides the page description when set |
 | `<t>_published_at` | DATETIME, null | first published |
@@ -59,6 +77,41 @@ Then the type's own fields, in real columns: `properties_bedrooms`,
 `properties_latitude`... Fields that are **live data** (availability, exact
 prices for dates) live in their own tables and are never part of the
 record's published content.
+
+### Blocks: the content of pages and rich types
+
+A block body is an array of objects, each with a `type` from this fixed set
+and that type's fields. The app's parser refuses any other type or field, and
+so does the site's; the site renders each type with one component. Adding a
+type is a change to both, released together.
+
+| Type | Fields | For |
+|---|---|---|
+| `heading` | `level` (2-4), `text` | section headings; the page's `<h1>` is its title |
+| `text` | `markdown` (paragraphs, lists, links, emphasis; no raw HTML, no headings) | running text |
+| `image` | `media_id`, `caption`? | one described image |
+| `gallery` | `media_ids` (2-24) | a set of images |
+| `quote` | `text`, `cite`? | a quotation, with who said it |
+| `callout` | `tone` (note, warning), `markdown` | something the reader must not miss |
+| `faq` | `items`: `question`, `answer` (Markdown) | questions and answers; the site adds FAQPage structured data |
+| `cta` | `label`, `path` (a page on the same site), `note`? | one call to action |
+| `table` | `columns`, `rows` (text cells) | small tabular facts |
+
+Links in blocks point at paths on the site or at `https` URLs, and are
+checked by the parser; a block never carries HTML, a script or a style.
+
+### `<t>_revisions`: every publish
+
+| Column | Type | Meaning |
+|---|---|---|
+| `properties_revisions_id` | INT UNSIGNED, primary key | |
+| `properties_revisions_property_id` | FK → `properties` | |
+| `properties_revisions_content` | JSON | the record's publishable columns and own fields, as published |
+| `properties_revisions_published_by` | FK → `users` | |
+| `properties_revisions_published_at` | DATETIME | |
+
+Written in the same transaction as the publish. A restore copies a revision's
+content back and publishes it, which writes a new revision.
 
 ### `<t>_slugs`: every slug a record has had
 
@@ -125,9 +178,10 @@ Site's docs/data-pages.md).
 | `properties_media_role_id` | FK → `types` (`media_role`: cover, gallery, plan) |
 | `properties_media_sort` | SMALLINT UNSIGNED |
 
-Originals are kept by the app (a volume, or object storage) and handed to
-the site's build by URL; the site resizes them and serves its own copies.
-Nothing on the public site links to the app's storage.
+Originals are kept in object storage, behind `StoragePort`, and handed to the
+site's build by a short-lived signed URL; the site resizes them and serves
+its own copies. Nothing on the public site links to the app's storage. The
+storage credentials live in Doppler (`prod-serve`), like every secret.
 
 ### `form_submissions`: what the site's forms send
 
@@ -169,7 +223,8 @@ site API answers each site key with only its own rows.
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/site/properties` | every published property: the publishable columns, its fields, its terms by slug, its media (URL, size, alt, credit), its previous slugs. Paged by path once large |
+| `GET /api/site/pages`, `GET /api/site/posts` | every published page (blocks) and post (Markdown), as below |
+| `GET /api/site/properties` | every published property: the publishable columns, its fields, its terms by slug, its media (URL, size, alt, credit), its previous slugs, and the publish bar it passed. Paged by path once large |
 | `GET /api/site/properties/retired` | retired slugs, each with its redirect hub or none |
 | `GET /api/site/terms/<taxonomy>` | the published terms of one taxonomy, with intros and previous slugs |
 | `POST /api/site/forms/<form>` | a form submission, parsed by that form's parser |
@@ -180,17 +235,18 @@ site (Waffle Site's docs/waffle-api.md).
 
 ## What is deliberately not here
 
-- **A page builder or a `pages` table.** Fixed pages are code (principle 1).
+- **A page builder with free layout.** Pages are blocks from a fixed set,
+  laid out by the site's code (principle 1); staff choose content, not
+  positions, colours or fonts.
 - **Generic custom fields.** A new field is a migration and a column.
-- **Revisions.** A record's history before the current version is not kept
-  in the first version of this model; add `<t>_revisions` (a JSON snapshot
-  per publish) when an app needs to undo or audit edits.
+- **Drafts' history.** Revisions are kept per publish, not per save.
 - **Comments or user-generated content.** A feature of its own when needed.
 
 ## Building it
 
-This becomes a slice per piece (AGENTS.md, docs/adding-a-feature.md): the
-publish state machine and slugs first, then terms, media, forms and sites,
-each with its failure list and tests. The queue it relies on is in the skeleton
-(docs/queue.md); whether the content model joins it there or ships as a
-Waffle Iron module is still to decide.
+A Waffle Iron module (docs/modules.md), built after the skeleton's queue
+(docs/queue.md), as a slice per piece: the publish state machine, revisions
+and slugs first; then blocks and their parser; terms; media and
+`StoragePort`; form submissions; sites. Each starts with its failure list and
+tests. A new record type is added by an agent following this document; there
+is no generator.

@@ -161,6 +161,14 @@ as in setup 1.
 - **Built today:** the API and its tests; the Vue app can be left unbuilt.
   **Not built yet:** token authentication.
 
+## Versions
+
+Waffle and Waffle Site are released separately, with **matching majors**: a
+Waffle Site 1.x site works with a Waffle 1.x app, and a breaking change to
+the site API is a major release of both. Each template's changelog says what
+a project porting a change needs to do; a project owns its code from setup
+on, and there is no upgrade tool.
+
 ## What every setup shares
 
 - One rulebook per project: AGENTS.md, test first, 100% coverage, the gate.
