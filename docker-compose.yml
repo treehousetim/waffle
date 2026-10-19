@@ -15,6 +15,11 @@
 # KEYS. Adding a config value means adding it there *and* to the Doppler
 # configs; nothing reads a key Compose does not pass through.
 
+# The Compose project's name: containers, networks and volumes are named for
+# the project's slug, not for whatever folder it was cloned into (on the server
+# that folder is /opt/<slug>, so the two agree).
+name: waffle
+
 services:
   db:
     image: mariadb:12.3

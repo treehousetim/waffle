@@ -192,3 +192,9 @@ it('leaves nothing of nginx behind', function (): void {
         ->and(composeFile('docker-compose.yml'))->not->toContain('nginx')
         ->and(composeFile('docker-compose.prod.yml'))->not->toContain('nginx');
 });
+
+it('names the Compose project for the slug, whatever folder the project is in', function (): void {
+    // Containers and volumes then belong to the project wherever it is
+    // cloned; on the server the folder is /opt/<slug>, so the names agree.
+    expect(composeFile('docker-compose.yml'))->toMatch('/^name: waffle$/m');
+});

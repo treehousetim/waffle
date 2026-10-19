@@ -12,6 +12,9 @@ Each release moves everything under `[Unreleased]` into its own section
 
 ## [Unreleased]
 
+### Changed
+- **The Compose project is named for the slug** (`name:` in `docker-compose.yml`), so containers and volumes are the project's wherever it is cloned, not the folder's. Porting: add `name: <your slug>` at the top of `docker-compose.yml`; on a server the folder is already `/opt/<slug>`, so volume names do not change.
+
 ## [0.2.0] - 2026-10-19
 
 ### Added
