@@ -30,7 +30,7 @@ of the shape stays.
    are fields, required before a record using the image can publish.
 6. **Changes are told, not polled.** A change to published content queues a
    change notice for the site (AGENTS.md §4), carried by the queue
-   (OPEN-QUESTIONS.md).
+   (docs/queue.md).
 
 ## Tables
 
@@ -191,5 +191,6 @@ site (Waffle Site's docs/waffle-api.md).
 
 This becomes a slice per piece (AGENTS.md, docs/adding-a-feature.md): the
 publish state machine and slugs first, then terms, media, forms and sites,
-each with its failure list and tests. Whether it ships in the skeleton or as
-a Waffle Iron module is decided with the queue (OPEN-QUESTIONS.md).
+each with its failure list and tests. The queue it relies on is in the skeleton
+(docs/queue.md); whether the content model joins it there or ships as a
+Waffle Iron module is still to decide.

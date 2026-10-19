@@ -5,6 +5,17 @@ Each starts with where it was settled. Newest moves at the top.
 
 ---
 
+## A queue, as part of Waffle itself?
+
+**Resolved 2026-10-18 by the owner:** yes, in the skeleton (not a Waffle Iron
+module), because change notices, mail and modules will all assume one. Stored
+in MariaDB and claimed with `SKIP LOCKED`, behind `QueuePort`, so jobs are
+created in the same transaction as the change they describe and the stack
+gains no service. RabbitMQ (through `php-amqplib`) was weighed: it would need
+this table as an outbox anyway, and is kept for later as an adapter behind the
+same port, when jobs run in the thousands per second or other services consume
+the same events. The design and failure list are in docs/queue.md.
+
 ## Where do secrets live?
 
 **Resolved by the template:** Doppler, and only Doppler — local and production —

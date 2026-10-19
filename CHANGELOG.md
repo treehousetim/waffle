@@ -21,7 +21,7 @@ Each release moves everything under `[Unreleased]` into its own section
 - **Setups** (docs/setups.md): the ways to build with Waffle and Waffle Site, each with what it needs and what is built today: app; app + site on one server or two; back office + site; a static site published by GitHub release (DigitalOcean App Platform out of the box); one app with several sites; API only. Public pages rendered on each request are recorded as deliberately unsupported.
 - **The content model, proposed** (docs/content-model.md): the tables behind anything a site publishes: publishable columns and a publish state machine, slug history, terms for hub pages, media described on upload, form submissions, sites; and the site API they serve.
 - **Change notices** (AGENTS.md §4): when records a site publishes change, the app sends the record type and slugs from a queued job, and the site rebuilds only the pages affected; never "rebuild everything".
-- **A queue for Waffle itself**, proposed in OPEN-QUESTIONS.md for a decision.
+- **A queue in the skeleton, decided and designed** (docs/queue.md): MariaDB-backed jobs behind `QueuePort`, enqueued in the same transaction as the change, a worker service, coalescing by key, retries with backoff, dead jobs in the admin; and its failure list. Not built yet.
 
 ### Changed
 - **The test suite has run.** Its first full run was green apart from 72 warnings from tests that silenced file errors with `@`, which now check first; `--coverage` is at 100%. Coverage now also instruments `tools/` (pcov watches the whole repository except `vendor/`).
