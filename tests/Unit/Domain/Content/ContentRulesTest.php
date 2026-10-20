@@ -229,3 +229,19 @@ it('refuses a field image that is not an image id', function (mixed $raw): void 
     'a fraction' => [1.5],
     'a list' => [[7]],
 ]);
+
+it('accepts an https:// address in printable ASCII only, as the site checks links', function (mixed $raw, ?string $url): void {
+    expect(ContentText::optionalHttpsUrl($raw, 'link', 500))->toBe($url);
+})->with([
+    'none' => ['', null],
+    'an address' => [' https://example.com/a?b=c ', 'https://example.com/a?b=c'],
+]);
+
+it('refuses any other link', function (mixed $raw): void {
+    expect(fn () => ContentText::optionalHttpsUrl($raw, 'link', 500))->toThrow(InvalidContent::class, 'The link must be an https:// address.');
+})->with([
+    'plain http' => ['http://example.com'],
+    'javascript' => ['javascript:alert(1)'],
+    'a non-breaking space' => ["https://example.com/a\u{00A0}b"],
+    'a line separator' => ["https://example.com/a\u{2028}b"],
+]);

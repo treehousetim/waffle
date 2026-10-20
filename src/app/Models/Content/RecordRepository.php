@@ -366,9 +366,11 @@ final readonly class RecordRepository
     }
 
     /**
-     * A revision as stored. One published before the type gained a field has
-     * no value for it, so it reads as none (null): adding a field never
-     * breaks the site API or a restore of an older revision.
+     * A revision as stored, with exactly the type's fields today. One
+     * published before the type gained a field reads as having none (null)
+     * for it, and a field the type has since lost is left out: changing a
+     * type's fields never breaks the site API or a restore of an older
+     * revision.
      *
      * @param array<string,mixed> $row
      */
@@ -376,7 +378,8 @@ final readonly class RecordRepository
     {
         /** @var array{slug:string,title:string,summary:string,body:string,seo_title:?string,seo_description:?string,fields:array<string,string|int|null>} $content */
         $content = json_decode((string) $row['content'], true, 512, JSON_THROW_ON_ERROR);
-        $content['fields'] = [...array_fill_keys($type->fields->names(), null), ...$content['fields']];
+        $names = $type->fields->names();
+        $content['fields'] = array_combine($names, array_map(static fn (string $name): string|int|null => $content['fields'][$name] ?? null, $names));
 
         return new Revision((int) $row['id'], (int) $row['record_id'], $content, (int) $row['published_by'], (string) $row['published_at']);
     }

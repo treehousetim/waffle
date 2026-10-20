@@ -180,8 +180,9 @@ final readonly class Publishing
     }
 
     /**
-     * Where each image is used, working copies included, so staff see what
-     * a change to it touches: by image id, each record by type name, then id.
+     * Where each image is used, by working copies and by what the site shows,
+     * so staff see what a change to it touches: by image id, each record by
+     * type name, then id.
      *
      * @return array<int,list<array{type:string,label:string,id:int,title:string,status:string}>>
      */
@@ -190,8 +191,15 @@ final readonly class Publishing
         $uses = [];
 
         foreach ($types->all() as $type) {
+            // What the site shows, which a working copy may since have dropped.
+            $live = [];
+
+            foreach ($this->records->published($type) as $revision) {
+                $live[$revision->recordId] = $this->mediaIds($type, $revision->content['body'], $revision->content['fields']);
+            }
+
             foreach ($this->records->all($type) as $record) {
-                foreach ($this->mediaIds($type, $record->body, $record->fields) as $id) {
+                foreach (array_unique([...$this->mediaIds($type, $record->body, $record->fields), ...($live[$record->id] ?? [])]) as $id) {
                     $uses[$id][] = ['type' => $type->name, 'label' => $type->label, 'id' => $record->id, 'title' => $record->title, 'status' => $record->status->value];
                 }
             }

@@ -58,8 +58,17 @@ final readonly class MediaLibrary
      */
     public function describe(int $id, array $input): Media
     {
-        $this->mustFind($id);
-        $this->media->describe($id, MediaDetails::parse($input));
+        $media = $this->mustFind($id);
+        $details = MediaDetails::parse($input);
+        $problems = MediaDetails::problems($id, $details->alt, $details->licence, $details->creditName);
+
+        // A public image is on a published page, and the site cannot build
+        // one whose image has no alt text or lacks its credit.
+        if ($media->publicAt !== null && $problems !== []) {
+            throw InvalidContent::because("Image {$id} is on the site, so it must stay described. " . implode(' ', $problems));
+        }
+
+        $this->media->describe($id, $details);
 
         return $this->mustFind($id);
     }

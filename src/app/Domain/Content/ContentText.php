@@ -78,6 +78,25 @@ final class ContentText
     }
 
     /**
+     * An optional https:// address: null when empty. Printable ASCII only, as
+     * the site's build checks it (a pasted non-breaking space would pass a
+     * byte-wise check here and fail the site's), so whatever the app accepts
+     * the site can build.
+     *
+     * @throws InvalidContent
+     */
+    public static function optionalHttpsUrl(mixed $raw, string $what, int $max): ?string
+    {
+        $url = self::optional($raw, $what, $max);
+
+        if ($url !== null && (preg_match('~^https://[^\s/?#]+\.[^\s/?#]+(?:[/?#]\S*)?$~i', $url) !== 1 || preg_match('/[^\x21-\x7E]/', $url) === 1)) {
+            throw InvalidContent::because("The {$what} must be an https:// address.");
+        }
+
+        return $url;
+    }
+
+    /**
      * An image from the media library that a record type names in its own
      * field, such as a cover: its id, or null when empty. Whether it exists
      * is the media library's to say, when the record is saved.

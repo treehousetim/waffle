@@ -40,9 +40,9 @@ docs/content-model.md is the design for all of it.
   summary and a body. Drafts may be incomplete.
 - **Every publish is kept.** Restoring a revision copies its content (not its
   slug) into the working copy and publishes it, which writes a new revision.
-  A revision published before its type gained a field reads as having none
-  (null) for it, so adding a field is a migration and a parser, nothing
-  more.
+  A revision reads with the type's fields as they are now: one published
+  before a field was added has none (null) for it, and a field since removed
+  is left out, so changing a type's fields never breaks an older revision.
 - **A slug is forever.** Every slug a record has had is kept in `<t>_slugs`
   and is never given to another record; a record may take back one of its own
   old slugs. A new record without a slug gets one made from its title
@@ -94,7 +94,11 @@ cannot be published. When a record using an image is first published, the
 image becomes public: the site API carries, for each image block, its path
 (`/api/site/media/<id>.jpg`), size, alt text, caption and credit, and that
 path serves the file to anyone. It stays public, so an older release of the
-site never loses a picture. Changing a public image's alt text, caption or
+site never loses a picture. A public image must stay described: a change that
+would leave it without alt text, or without the credit its licence needs, is
+refused, since the site could not build the pages showing it. Links (a
+credit's, or a record type's own) are `https://` addresses in printable
+ASCII, as the site checks them (`ContentText::optionalHttpsUrl()`). Changing a public image's alt text, caption or
 credit changes the pages that show it, so it queues a change notice naming
 every published record that uses it (see "Change notices").
 
@@ -107,7 +111,7 @@ so the editor offers the media library's images to choose from.
 
 | Route | Permission | Does |
 | --- | --- | --- |
-| `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs and `used_by`: every record using it, drafts included (type, label, id, title, status) |
+| `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs and `used_by`: every record using it, in its working copy or in what the site shows (type, label, id, title, status) |
 | `POST /api/content/media` | `content-edit` | the image as the body (`Content-Type: image/jpeg`, `image/png`, `image/webp`) |
 | `PUT /api/content/media/{id}` | `content-edit` | `{alt, caption, credit_name, credit_url, licence}` |
 | `GET /api/content/media/{id}/file` | `content-edit` | any image's file |
@@ -239,5 +243,5 @@ types to it.
 24. A record is published using an image with no alt text, or without the credit its licence needs.
 25. The same picture uploaded twice becomes two images.
 26. An image no published record has used is served to anyone.
-27. A revision published before its type gained a field breaks the site API or a restore.
+27. A revision published before its type gained or lost a field breaks the site API or a restore.
 28. A public image's description changes and the pages showing it are not rebuilt, so the site keeps an old credit or alt text.

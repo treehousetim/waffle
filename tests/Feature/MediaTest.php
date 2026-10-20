@@ -203,3 +203,37 @@ it('lists where each image is used, working copies included, so staff know what 
         ['type' => 'pages', 'label' => 'page', 'id' => $draft, 'title' => 'Draft with it', 'status' => 'draft'],
     ])->and($media[$unused]['used_by'])->toBe([]);
 });
+
+it('keeps a public image described, since the site cannot build a page with one that is not (24)', function (): void {
+    $this->asAdministrator();
+    $id = $this->json(($this->upload)(TestImages::jpeg(640, 480)))['data']['media']['id'];
+    $this->put("/api/content/media/{$id}", ['alt' => 'Sample: shown']);
+    $page = $this->json($this->post('/api/content/pages', ['title' => 'Shows one', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $id]]]))['data']['record']['id'];
+    $this->post("/api/content/pages/{$page}/publish");
+
+    $blanked = $this->put("/api/content/media/{$id}", ['alt' => '']);
+    $uncredited = $this->put("/api/content/media/{$id}", ['alt' => 'Sample: shown', 'licence' => 'licensed']);
+    $badLink = $this->put("/api/content/media/{$id}", ['alt' => 'Sample: shown', 'credit_name' => 'Sample', 'credit_url' => "https://example.com/a\u{00A0}b"]);
+    $media = array_column($this->json($this->get('/api/content/media'))['data']['media'], null, 'id')[$id];
+
+    expect($blanked->getStatusCode())->toBe(422)
+        ->and($this->json($blanked)['error'])->toBe("Image {$id} is on the site, so it must stay described. Image {$id} needs a description (alt text).")
+        ->and($uncredited->getStatusCode())->toBe(422)
+        ->and($this->json($badLink)['error'])->toBe('The credit link must be an https:// address.')
+        ->and($media['alt'])->toBe('Sample: shown')
+        ->and($media['licence'])->toBe('own');
+});
+
+it('lists a published record by what the site shows as well as its working copy', function (): void {
+    $this->asAdministrator();
+    $id = $this->json(($this->upload)(TestImages::jpeg(640, 480)))['data']['media']['id'];
+    $this->put("/api/content/media/{$id}", ['alt' => 'Sample: live']);
+    $page = $this->json($this->post('/api/content/pages', ['title' => 'Live one', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $id]]]))['data']['record']['id'];
+    $this->post("/api/content/pages/{$page}/publish");
+    // The working copy drops the image; the site still shows it until the next publish.
+    $this->put("/api/content/pages/{$page}", ['slug' => 'live-one', 'title' => 'Live one', 'summary' => 'S', 'body' => [['type' => 'heading', 'level' => 2, 'text' => 'No image']]]);
+
+    $media = array_column($this->json($this->get('/api/content/media'))['data']['media'], null, 'id')[$id];
+
+    expect(array_column($media['used_by'], 'id'))->toBe([$page]);
+});

@@ -31,11 +31,7 @@ final readonly class MediaDetails
     {
         $licence = Licence::tryFrom(is_string($input['licence'] ?? null) ? $input['licence'] : 'own')
             ?? throw InvalidContent::because('The licence must be own, permission or licensed.');
-        $url = ContentText::optionalLine($input['credit_url'] ?? null, 'credit link', 500);
-
-        if ($url !== null && preg_match('~^https://[^\s/?#]+\.[^\s/?#]+(?:[/?#]\S*)?$~i', $url) !== 1) {
-            throw InvalidContent::because('The credit link must be an https:// address.');
-        }
+        $url = ContentText::optionalHttpsUrl($input['credit_url'] ?? null, 'credit link', 500);
 
         return new self(
             ContentText::optionalLine($input['alt'] ?? null, 'description', 300) ?? '',

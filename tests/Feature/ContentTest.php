@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Tests\TestCase;
+
 /*
  * The content slice through the router (docs/content.md). AccessGridTest
  * checks 401 and 403 for every route and level; these check what each route
@@ -91,3 +93,16 @@ it('answers 404 for a type, record or revision that does not exist (13)', functi
     'retiring a missing record' => ['POST', '/api/content/posts/999999/retire'],
     'restoring a missing revision' => ['POST', '/api/content/posts/999999/revisions/1/restore'],
 ]);
+
+it('restores a revision that holds a field the type has since lost (27)', function (): void {
+    $this->asAdministrator();
+    $id = $this->json($this->post('/api/content/posts', ['title' => 'Older post', 'summary' => 'S', 'body' => 'Text.']))['data']['record']['id'];
+    $this->post("/api/content/posts/{$id}/publish");
+    TestCase::pdo()->prepare("UPDATE posts_revisions SET posts_revisions_content = JSON_SET(posts_revisions_content, '$.fields', JSON_OBJECT('capacity', 40)) WHERE posts_revisions_post_id = ?")->execute([$id]);
+    $revision = $this->json($this->get("/api/content/posts/{$id}"))['data']['revisions'][0]['id'];
+
+    $restored = $this->post("/api/content/posts/{$id}/revisions/{$revision}/restore");
+
+    expect($restored->getStatusCode())->toBe(200)
+        ->and($this->json($restored)['data']['record'])->not->toHaveKey('capacity');
+});
