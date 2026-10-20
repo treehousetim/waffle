@@ -13,6 +13,8 @@ Sparse list. One line each where possible. When answered, move it to `RESOLVED_Q
 
 - **Waffle Iron modules at 1.0.** Short links declares `waffle >=0.1 <1.0`, so it stops matching at 1.0. Proposed: modules declare a major (`>=1.0 <2.0`), and short links is proven on 1.0 and re-released for it.
 
+- **Media needs an object-storage client.** The content model keeps media in S3-compatible object storage from day one (RESOLVED_QUESTIONS.md), behind `StoragePort` (docs/storage.md); everything else media needs is built or planned without a new library. AGENTS.md §2's rule picks the candidate with the most installs: `aws/aws-sdk-php` (the AWS SDK; large, but the reference client, and works with DigitalOcean Spaces). The lighter alternative is `async-aws/s3`. Until one is approved, media (and image and gallery blocks) waits; the other choice is to start media on `LocalDiskStorage` as member photos do, and move it with the adapter.
+
 ## Needs a decision before production
 - **Backing up stored files.** The `storage_data` volume (docs/storage.md: uploads, photos) is in no backup. Proposed: the nightly backup also archives the volume beside the database dump, and both go off-site together (below); or files move to object storage, which keeps its own copies.
 - **Off-site backups.** `tools/backup-prod-db.sh` keeps 14 nightly dumps on the server itself, which does not survive losing the server. Where should copies go (object storage in another region, with a key limited to one bucket)?
