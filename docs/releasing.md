@@ -47,6 +47,13 @@ a version there is semver.
    GitHub release with that changelog section as its notes. For an app,
    publishing the release is what deploys it.
 
+**CI** (`.github/workflows/ci.yml`) runs the same gate on every push to
+`main` and every pull request, with no secret, no environment and a
+read-only token, so a pull request from anyone can be tested safely. It is
+the check, not the release: releasing still runs the gate itself, before
+anything is tagged. A project started from this template keeps it; on a
+private repository its runs count against the account's Actions minutes.
+
 `tests/Unit/ReleaseTest.php` keeps the paperwork honest on every run: the
 `VERSION` has its changelog section, `[Unreleased]` is on top, and nothing
 else claims to be the version.

@@ -1,0 +1,36 @@
+name: CI
+
+# The gate (`./tools/test.sh --coverage`) on every push to main and every pull
+# request: the same suite, at the same 100%, that tools/release.sh runs before
+# a release. It holds no secret and deploys nothing.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes an older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # Pinned to a commit, like every action here (deploy.yml says why).
+      - name: Check out
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      # Compose brings up the stack (no .env: the test credentials are the
+      # local defaults), then Pest and the dashboard's Node suite run inside
+      # it, exactly as on a laptop.
+      - name: Run the gate
+        run: ./tools/test.sh --coverage
