@@ -61,3 +61,30 @@ it('deploys only an app\'s release tags, and never from the framework\'s own rep
     expect($workflow)->toContain('if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then')
         ->and(explode("\n", $workflow))->toContain("    if: github.repository != 'treehousetim/waffle'");
 });
+
+it('runs npm and composer only in a job with no environment, and secrets only in jobs that run neither', function (): void {
+    $workflow = projectFile('.github/workflows/deploy.yml');
+    $body = substr($workflow, (int) strpos($workflow, "\njobs:\n") + 7);
+    preg_match_all('/^  ([a-z][a-z-]*):\n/m', $body, $names, PREG_OFFSET_CAPTURE);
+    $jobs = [];
+
+    foreach ($names[1] as $index => [$name, $offset]) {
+        $end = $names[0][$index + 1][1] ?? strlen($body);
+        $text = substr($body, $offset, $end - $offset);
+        // Comments may mention anything; only what runs counts.
+        $jobs[$name] = implode("\n", array_filter(explode("\n", $text), static fn (string $line): bool => preg_match('/^\s*#/', $line) !== 1));
+    }
+
+    expect(array_keys($jobs))->toBe(['build', 'ship', 'alert']);
+
+    foreach ($jobs as $name => $job) {
+        $installs = preg_match('/\b(npm (ci|run|install|audit)|composer (install|audit))\b/', $job) === 1;
+        $secrets = preg_match('/secrets\.|environment:/', $job) === 1;
+
+        expect($installs && $secrets)->toBeFalse("job {$name} runs a package manager and can read a secret");
+    }
+
+    expect($jobs['ship'])->toContain('actions/download-artifact@')
+        ->and($jobs['build'])->toContain('actions/upload-artifact@')
+        ->and($jobs['alert'])->toContain("needs: [build, ship]\n    if: failure()");
+});

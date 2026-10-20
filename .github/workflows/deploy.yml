@@ -20,26 +20,19 @@ permissions:
 # server's key. Re-pin deliberately, never to a moving tag.
 
 jobs:
-  deploy:
-    name: Build and ship ${{ github.event.release.tag_name }}
+  # -------------------------------------------------------------------------
+  # Build: npm and composer run here, in a job with no environment, so
+  # nothing they install or run can read a secret. The release goes to the
+  # ship job as a tarball (which keeps the scripts' execute bits).
+  # -------------------------------------------------------------------------
+  build:
+    name: Build ${{ github.event.release.tag_name }}
     # The framework's own repository publishes releases too (semver, for
     # Packagist) and has no server: never try to deploy from it. In a project
     # started from it this is always true. tools/rename-project.sh leaves this
     # line alone because it names treehousetim/waffle.
     if: github.repository != 'treehousetim/waffle'
     runs-on: ubuntu-latest
-
-    # A GitHub *environment*, not repo-level secrets.
-    #
-    # DOPPLER_TOKEN lives on this environment, so only a job that declares it
-    # can read the value — an unrelated workflow in this repository cannot.
-    # It is also where deployment protection rules hang: required reviewers,
-    # wait timers, and a tag policy restricting deploys to v* refs.
-    #
-    # `url` is what the Deployments view links to once this job succeeds.
-    environment:
-      name: prod
-      url: https://waffle.example.com
 
     steps:
       # -------------------------------------------------------------------
@@ -129,6 +122,66 @@ jobs:
           [ -d src/public/assets ] || { echo "::error::missing src/public/assets"; exit 1; }
           echo "artifact complete"
 
+      - name: Package the release
+        run: |
+          set -euo pipefail
+          tar --exclude=./.git --exclude=./node_modules --exclude=./src/frontend/node_modules \
+            -czf "$RUNNER_TEMP/release.tgz" .
+
+      - name: Hand the release to the ship job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release
+          path: ${{ runner.temp }}/release.tgz
+          retention-days: 3
+
+  # -------------------------------------------------------------------------
+  # Ship: the only job that can read DOPPLER_TOKEN, and it runs neither npm
+  # nor composer. A process a package started in the build job cannot
+  # outlive that job, so it can never see the server's key (secrets loaded
+  # later in the same job would not have been safe from it).
+  # -------------------------------------------------------------------------
+  ship:
+    name: Ship ${{ github.event.release.tag_name }}
+    needs: build
+    runs-on: ubuntu-latest
+
+    # A GitHub *environment*, not repo-level secrets.
+    #
+    # DOPPLER_TOKEN lives on this environment, so only a job that declares it
+    # can read the value — an unrelated workflow in this repository cannot.
+    # It is also where deployment protection rules hang: required reviewers,
+    # wait timers, and a tag policy restricting deploys to v* refs.
+    #
+    # `url` is what the Deployments view links to once this job succeeds.
+    environment:
+      name: prod
+      url: https://waffle.example.com
+
+    steps:
+      - name: Refuse anything but a version tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then
+            echo "::error::release tag is not vN (an app's release number, docs/releasing.md); refusing to deploy it"
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Take the release from the build job
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release
+          path: ${{ runner.temp }}
+
+      - name: Unpack the release
+        run: |
+          set -euo pipefail
+          mkdir release
+          tar -xzf "$RUNNER_TEMP/release.tgz" -C release
+
       # -------------------------------------------------------------------
       # Secrets.
       #
@@ -139,9 +192,6 @@ jobs:
       # separate `prod-serve` config and are pulled by the server itself with its own
       # token, so they never touch this runner.
       #
-      # Loaded only now, after npm and composer: both run code from the
-      # packages they install, and anything run after this step can read the
-      # server's key from the environment.
       # -------------------------------------------------------------------
       - name: Install the Doppler CLI
         uses: dopplerhq/cli-action@014df23b1329b615816a38eb5f473bb9000700b1 # v3
@@ -211,6 +261,7 @@ jobs:
       # `phinx migrate` never reads the seeds path.
       # -------------------------------------------------------------------
       - name: Rsync the release to the server
+        working-directory: release
         run: |
           set -euo pipefail
           rsync -az --delete \
@@ -244,15 +295,35 @@ jobs:
             "${DROPLET_USER}@${DROPLET_HOST}" \
             "bash /opt/waffle/deploy/deploy.sh '$TAG'"
 
+      - name: Clean up credentials
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+  # -------------------------------------------------------------------------
+  # A failed build or ship says so where people look. Its own job, so a
+  # failed build (which never reaches ship) is reported too; it runs no
+  # package manager.
+  # -------------------------------------------------------------------------
+  alert:
+    name: Report a failed deploy
+    needs: [build, ship]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    steps:
+      - name: Install the Doppler CLI
+        uses: dopplerhq/cli-action@014df23b1329b615816a38eb5f473bb9000700b1 # v3
+
       # -------------------------------------------------------------------
       # A failed deploy says so where people look. Optional:
       # DEPLOY_ALERT_WEBHOOK, a Slack incoming-webhook URL in Doppler's
       # prod-deploy config. Without it, the failed run here is the only notice.
       # -------------------------------------------------------------------
       - name: Tell Slack the deploy failed
-        if: failure()
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
           set -uo pipefail
           url="$(doppler secrets get DEPLOY_ALERT_WEBHOOK --plain 2>/dev/null || true)"
@@ -266,7 +337,3 @@ jobs:
           text="The deploy of ${TAG:-a release} failed: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           curl -fsS -m 10 -H 'Content-Type: application/json' -d "$(jq -n --arg text "$text" '{text: $text}')" "$url" >/dev/null \
             || echo "::warning::the deploy alert could not be sent"
-
-      - name: Clean up credentials
-        if: always()
-        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts

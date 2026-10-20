@@ -28,6 +28,7 @@ Porting: copy the files under `src/app/{Domain,Models,Libraries}/Content/`, `Con
 
 ### Security
 Found by a review of what KAW Meetup built, and fixed there first.
+- **npm and composer never share a job with the deploy secrets.** `deploy.yml` builds in a job with no environment and hands the release to a ship job, which runs neither, as a tarball (so the scripts keep their execute bits); a process a package started cannot outlive its job, so it cannot read the server's key. A failed build or ship is reported by its own job. Porting: `.github/workflows/deploy.yml`.
 - **Forms counted every visitor as the site's server.** The app's Caddy rewrites `X-Forwarded-For` to the site server's address, so all visitors shared one rate-limit bucket and one script could block everyone. The address now comes from `X-Visitor-Address`, which Waffle Site's Caddy writes, read only behind the site key. Porting: `Domain/Forms/Visitor.php`, `SiteFormController`.
 - **The visitor hash was keyed by a value in the same database**, so a copy of the database could reverse it; it is now an HMAC whose key is made once and kept in storage (`Reception::KEY`). Porting: `Reception.php`, its container entry.
 - **The Markdown check missed HTML** between escaped backticks and in a code span broken by a blank line, and **unsafe links defined inside a quotation or a list**. Porting: `Domain/Content/Markdown.php`. (Waffle Site now also sanitises what it renders.)
