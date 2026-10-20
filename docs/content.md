@@ -101,7 +101,9 @@ every published record that uses it (see "Change notices").
 A record type's own fields may name images too, such as an event's cover:
 its `RecordFields::images()` says which, by the name the site API gives each
 (`cover`), and they are checked, made public and handed to the site exactly
-like an image block's. Parse such a field with `ContentText::optionalImage()`.
+like an image block's. Parse such a field with `ContentText::optionalImage()`,
+and give it `input: 'image'` in the route's `fields` (src/frontend/src/router/),
+so the editor offers the media library's images to choose from.
 
 | Route | Permission | Does |
 | --- | --- | --- |

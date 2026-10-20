@@ -37,6 +37,22 @@ const busy = ref(false)
 
 const base = computed(() => `/content/${props.type}`)
 
+/** The media library, for a field that names an image (an event's cover). */
+const library = ref([])
+const imageLabel = (item) => `${item.id}: ${item.alt || '(no description yet)'}`
+
+async function loadLibrary() {
+  if (!props.fields.some((field) => field.input === 'image')) {
+    return
+  }
+
+  try {
+    library.value = unwrap(await client.get('/content/media')).media
+  } catch {
+    library.value = []
+  }
+}
+
 async function load() {
   try {
     records.value = unwrap(await client.get(base.value)).records
@@ -91,8 +107,12 @@ const restore = (revision) =>
 watch(() => props.type, () => {
   startNew()
   load()
+  loadLibrary()
 })
-onMounted(load)
+onMounted(() => {
+  load()
+  loadLibrary()
+})
 </script>
 
 <template>
@@ -123,7 +143,11 @@ onMounted(load)
         <label>Summary <textarea v-model="draft.summary" maxlength="300" rows="2" /></label>
         <label v-for="field in fields" :key="field.name">
           {{ field.label }}
-          <input v-model="draft[field.name]" :type="field.input ?? 'text'" />
+          <select v-if="field.input === 'image'" v-model="draft[field.name]">
+            <option value="">None</option>
+            <option v-for="item in library" :key="item.id" :value="String(item.id)">{{ imageLabel(item) }}</option>
+          </select>
+          <input v-else v-model="draft[field.name]" :type="field.input ?? 'text'" />
         </label>
         <BlocksEditor v-if="blocks" v-model="draft.body" />
         <label v-else>Body (Markdown) <textarea v-model="draft.body" rows="16" /></label>
@@ -157,6 +181,6 @@ onMounted(load)
 <style scoped>
 .columns { display: grid; grid-template-columns: minmax(12rem, 1fr) 3fr; gap: 1.5rem; }
 form label { display: block; margin-bottom: 0.75rem; }
-form input, form textarea { display: block; width: 100%; }
+form input, form textarea, form select { display: block; width: 100%; }
 @media (max-width: 700px) { .columns { grid-template-columns: 1fr; } }
 </style>
