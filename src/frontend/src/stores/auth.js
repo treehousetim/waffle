@@ -40,7 +40,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try {
-      await client.post('/auth/logout')
+      // An empty JSON body: the API takes no other kind (see api/client.js).
+      await client.post('/auth/logout', {})
     } finally {
       forget()
     }

@@ -13,7 +13,12 @@ const client = axios.create({
   baseURL: '/api',
   withCredentials: true,
   headers: {
-    Accept: 'application/json'
+    Accept: 'application/json',
+    // Every body this app sends is JSON. Without this, axios labels a POST
+    // with no body a form, which the API refuses (415) as a cross-site
+    // defence (Domain/Auth/CrossSiteRequest): sign-out failed that way. A
+    // request that sends something else sets its own type.
+    'Content-Type': 'application/json'
   }
 })
 

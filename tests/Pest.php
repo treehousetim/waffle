@@ -84,6 +84,7 @@ uses()->group('core')->in(
     'Unit/DeployScriptsTest.php',
     'Unit/CreateProjectTest.php',
     'Unit/SetupGithubTest.php',
+    'Unit/FrontendClientTest.php',
     'Feature/AuthTest.php',
     'Feature/HelloTest.php',
     'Feature/CronTest.php',
