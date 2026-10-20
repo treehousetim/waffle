@@ -51,6 +51,10 @@ function renameFixture(): string
         $db = 'waffle_test';
         $site = 'waffle.example.com';
         PHP);
+    file_put_contents($dir . '/companions.md', <<<'MD'
+        Waffle and Waffle Site: see Waffle Site's docs/waffle-api.md.
+        A waffle-site project, Waffle Iron modules from waffle-iron.
+        MD);
 
     return $dir;
 }
@@ -113,6 +117,8 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
         }
 
         foreach (explode("\n", $contents) as $number => $line) {
+            $line = str_replace(['Waffle Site', 'Waffle Iron', 'waffle-site', 'waffle-iron', 'waffle-api.md'], '', $line);
+
             if (!str_contains($line, 'treehousetim/waffle') && preg_match('/waffle/i', $line)) {
                 $leftovers[] = $path . ':' . ($number + 1) . ': ' . trim($line);
             }
@@ -158,6 +164,14 @@ it('starts the project\'s own release stream, recording where it started (18)', 
         ->and($changelog)->toEndWith("## [Unreleased]\n")
         // None of the framework's own history comes along.
         ->and($changelog)->not->toMatch('/^## \[\d/m');
+});
+
+it('keeps the names of the framework\'s companions (20)', function (): void {
+    runRename($this->dir, ['acme', 'Acme Ops', 'ops.acme.com']);
+
+    expect(file_get_contents($this->dir . '/companions.md'))->toBe(
+        "Acme Ops and Waffle Site: see Waffle Site's docs/waffle-api.md.\nA waffle-site project, Waffle Iron modules from waffle-iron.",
+    );
 });
 
 it('leaves the framework\'s own setup tests behind, so a project passes its own tests (19)', function (): void {

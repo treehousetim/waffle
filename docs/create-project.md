@@ -121,3 +121,7 @@ against a scratch copy of the files they edit.
     sense in the framework came with it. → The rename removes them
     (`tests/Unit/CreateProjectTest.php`), and no test writes a placeholder in a
     form the rename cannot reach.
+20. The framework's companions are renamed with the project, so its documents
+    send people to a "<Name> Site" or "<Name> Iron" that does not exist. → The
+    rename keeps `Waffle Site`, `Waffle Iron`, `waffle-site`, `waffle-iron`
+    and `waffle-api.md` as they are.

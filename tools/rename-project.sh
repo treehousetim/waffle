@@ -18,7 +18,8 @@
 # then gives composer.json the project's own package name and description, and
 # turns README's backronym into a line saying the project is built on Waffle.
 # Lines containing `treehousetim/waffle` point at the framework and are left
-# alone. docs/create-project.md has the details and the failure list.
+# alone, and so are the names of its companions (Waffle Site, Waffle Iron,
+# waffle-site, waffle-iron, waffle-api.md), which a project does not rename. docs/create-project.md has the details and the failure list.
 #
 # The slug must be lowercase letters, digits and underscores, starting with a
 # letter, because it becomes a MariaDB database name and the test database is
@@ -103,9 +104,19 @@ for file in $FILES; do
     # a character sed would read as anything but itself.
     sed -i.rename-bak \
         -e "/${KEEP//\//\\/}/!{" \
+        -e "s|Waffle Site|@@COMPANION_SITE@@|g" \
+        -e "s|Waffle Iron|@@COMPANION_IRON@@|g" \
+        -e "s|waffle-site|@@companion_site@@|g" \
+        -e "s|waffle-iron|@@companion_iron@@|g" \
+        -e "s|waffle-api\.md|@@companion_api@@|g" \
         -e "s|waffle\.example\.com|${HOST}|g" \
         -e "s|Waffle|${NAME}|g" \
         -e "s|waffle|${SLUG}|g" \
+        -e "s|@@COMPANION_SITE@@|Waffle Site|g" \
+        -e "s|@@COMPANION_IRON@@|Waffle Iron|g" \
+        -e "s|@@companion_site@@|waffle-site|g" \
+        -e "s|@@companion_iron@@|waffle-iron|g" \
+        -e "s|@@companion_api@@|waffle-api.md|g" \
         -e "}" \
         "$file"
     rm -f "$file.rename-bak"
