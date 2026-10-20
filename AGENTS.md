@@ -149,7 +149,7 @@ tests/
 docs/                     # anything too long-lived for a comment; indexed in README.md's Documentation table
 modules/                  # empty: drop a module here to check it with ModulesTest (docs/modules.md); never renamed
 .env.testing              # committed; test DB name and dummy values only, no secrets
-.github/workflows/deploy.yml
+.github/workflows/        # deploy.yml (releases), ci.yml (the gate on pushes to main and pull requests)
 AGENTS.md                 # this file; CLAUDE.md contains only "See @AGENTS.md"
 README.md, CHANGELOG.md, OPEN-QUESTIONS.md, RESOLVED_QUESTIONS.md
 ```
