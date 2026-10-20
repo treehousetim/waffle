@@ -40,6 +40,9 @@ docs/content-model.md is the design for all of it.
   summary and a body. Drafts may be incomplete.
 - **Every publish is kept.** Restoring a revision copies its content (not its
   slug) into the working copy and publishes it, which writes a new revision.
+  A revision published before its type gained a field reads as having none
+  (null) for it, so adding a field is a migration and a parser, nothing
+  more.
 - **A slug is forever.** Every slug a record has had is kept in `<t>_slugs`
   and is never given to another record; a record may take back one of its own
   old slugs. A new record without a slug gets one made from its title
@@ -217,3 +220,4 @@ Meetup's `events` is the worked example.
 24. A record is published using an image with no alt text, or without the credit its licence needs.
 25. The same picture uploaded twice becomes two images.
 26. An image no published record has used is served to anyone.
+27. A revision published before its type gained a field breaks the site API or a restore.

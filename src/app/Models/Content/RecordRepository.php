@@ -188,7 +188,7 @@ final readonly class RecordRepository
         /** @var list<array<string,mixed>> $rows */
         $rows = $statement->fetchAll();
 
-        return array_map(self::revision(...), $rows);
+        return array_map(static fn (array $row): Revision => self::revision($type, $row), $rows);
     }
 
     /** One of this record's revisions; another record's is not found (5.). */
@@ -200,7 +200,7 @@ final readonly class RecordRepository
         /** @var array<string,mixed>|false $row */
         $row = $statement->fetch();
 
-        return $row === false ? null : self::revision($row);
+        return $row === false ? null : self::revision($type, $row);
     }
 
     public function latestRevision(RecordType $type, int $id): ?Revision
@@ -227,7 +227,7 @@ final readonly class RecordRepository
         /** @var list<array<string,mixed>> $rows */
         $rows = $statement->fetchAll();
 
-        return array_map(self::revision(...), $rows);
+        return array_map(static fn (array $row): Revision => self::revision($type, $row), $rows);
     }
 
     /**
@@ -365,11 +365,18 @@ final readonly class RecordRepository
         );
     }
 
-    /** @param array<string,mixed> $row */
-    private static function revision(array $row): Revision
+    /**
+     * A revision as stored. One published before the type gained a field has
+     * no value for it, so it reads as none (null): adding a field never
+     * breaks the site API or a restore of an older revision.
+     *
+     * @param array<string,mixed> $row
+     */
+    private static function revision(RecordType $type, array $row): Revision
     {
         /** @var array{slug:string,title:string,summary:string,body:string,seo_title:?string,seo_description:?string,fields:array<string,string|int|null>} $content */
         $content = json_decode((string) $row['content'], true, 512, JSON_THROW_ON_ERROR);
+        $content['fields'] = [...array_fill_keys($type->fields->names(), null), ...$content['fields']];
 
         return new Revision((int) $row['id'], (int) $row['record_id'], $content, (int) $row['published_by'], (string) $row['published_at']);
     }

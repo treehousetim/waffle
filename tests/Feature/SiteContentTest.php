@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Domain\Auth\Role;
+use App\Controllers\SiteContentController;
+use App\Domain\Content\RecordFields;
+use App\Domain\Content\RecordType;
 use App\Domain\Content\RecordTypes;
 use App\Libraries\Content\Publishing;
 use App\Models\Content\RecordRepository;
@@ -79,4 +82,43 @@ it('answers anybody, signed in or not, and never a session', function (): void {
 
 it('has no site API for a type it does not publish', function (): void {
     expect($this->get('/api/site/users')->getStatusCode())->toBe(404);
+});
+
+it('reads a revision published before its type gained a field as having none (27)', function (): void {
+    $this->asAdministrator();
+    $id = $this->json($this->post('/api/content/posts', ['title' => 'Before the field', 'summary' => 'S', 'body' => 'Text.']))['data']['record']['id'];
+    $this->post("/api/content/posts/{$id}/publish");
+    // Posts gain a field after that publish: its revision has no value for it.
+    $this->swap(RecordTypes::class, new RecordTypes(new RecordType('posts', 'post', 'post', new class () implements RecordFields {
+        public function names(): array
+        {
+            return ['venue'];
+        }
+
+        public function parse(array $input): array
+        {
+            return ['venue' => null];
+        }
+
+        public function present(array $stored): array
+        {
+            return ['venue' => $stored['venue']];
+        }
+
+        public function publishProblems(array $stored): array
+        {
+            return [];
+        }
+
+        public function images(array $stored): array
+        {
+            return [];
+        }
+    }), TestCase::container()->get('record_type:pages')));
+    $this->swap(SiteContentController::class, TestCase::container()->make(SiteContentController::class));
+
+    $site = array_column($this->json($this->get('/api/site/posts'))['data']['records'], null, 'slug')['before-the-field'];
+
+    expect($site)->toHaveKey('venue')
+        ->and($site['venue'])->toBeNull();
 });
