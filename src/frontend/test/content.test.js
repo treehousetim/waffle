@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { draftFrom, emptyDraft, statusLabel } from '../src/utils/content.js'
+import { draftFrom, emptyDraft, listTime, statusLabel } from '../src/utils/content.js'
 
 test('labels the publish statuses, and passes others through', () => {
   assert.equal(statusLabel('draft'), 'Draft')
@@ -40,4 +40,10 @@ test('starts a page with no blocks, and copies the blocks it is given', () => {
   draft.body[0].text = 'changed'
 
   assert.equal(record.body[0].text, 'A')
+})
+
+test('shows a date and time in a list as it was given, or nothing', () => {
+  assert.equal(listTime('2026-11-12T18:30:00-06:00'), '2026-11-12 18:30')
+  assert.equal(listTime(null), '')
+  assert.equal(listTime('soon'), '')
 })

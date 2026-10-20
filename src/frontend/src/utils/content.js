@@ -14,6 +14,17 @@ export function statusLabel(status) {
 }
 
 /**
+ * A date and time from the API ("2026-11-12T18:30:00-06:00") as the list
+ * shows it: "2026-11-12 18:30", in the zone it was given in. Empty for none.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function listTime(value) {
+  return typeof value === 'string' && value.length >= 16 ? value.slice(0, 16).replace('T', ' ') : ''
+}
+
+/**
  * A blank working copy: the fields every record has, and the type's own. A
  * type whose body is blocks starts with none.
  *

@@ -4,7 +4,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import client, { unwrap } from '@/api/client'
 import BlocksEditor from '@/components/BlocksEditor.vue'
 import { useAuthStore } from '@/stores/auth'
-import { draftFrom, emptyDraft, statusLabel } from '@/utils/content'
+import { draftFrom, emptyDraft, listTime, statusLabel } from '@/utils/content'
 import { apiErrorMessage } from '@/utils/errors'
 
 /*
@@ -18,7 +18,9 @@ const props = defineProps({
   label: { type: String, required: true },
   fields: { type: Array, default: () => [] },
   /** Whether the body is blocks (pages) rather than Markdown. */
-  blocks: { type: Boolean, default: false }
+  blocks: { type: Boolean, default: false },
+  /** A date-and-time field to show beside each record in the list, such as an event's start. */
+  listTimeField: { type: String, default: '' }
 })
 
 const auth = useAuthStore()
@@ -106,6 +108,7 @@ onMounted(load)
           <li v-for="record in records" :key="record.id">
             <a href="#" @click.prevent="open(record.id)">{{ record.title }}</a>
             <small> {{ statusLabel(record.status) }}</small>
+            <small v-if="listTimeField && record[listTimeField]"> · {{ listTime(record[listTimeField]) }}</small>
           </li>
         </ul>
         <p v-if="records.length === 0">None yet.</p>
