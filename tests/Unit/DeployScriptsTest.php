@@ -216,3 +216,14 @@ it('needs a hostname', function (): void {
     expect($code)->toBe(2)
         ->and($err)->toContain('usage');
 });
+
+it('waits for the php container\'s own composer install by PID 1\'s name, not its command line', function (): void {
+    // The startup shell's command line is "composer install ... && exec
+    // php-fpm", so matching "php-fpm" there is true before the install ends,
+    // and a second install races it (docs: tools/test.sh, section 6).
+    $script = (string) file_get_contents(dirname(__DIR__, 2) . '/tools/test.sh');
+
+    expect($script)->toContain('cat /proc/1/comm')
+        ->and($script)->toContain('= "php-fpm" ]')
+        ->and($script)->not->toContain('/proc/1/cmdline');
+});

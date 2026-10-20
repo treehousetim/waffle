@@ -207,11 +207,15 @@ docker compose exec -T db mariadb -uroot -p"${DB_ROOT_PASSWORD}" -e "
 # The php service's startup command is `composer install && exec php-fpm`, so
 # PID 1 is the shell until that install finishes and becomes php-fpm after. That
 # makes it an exact readiness signal — and waiting for it matters: starting a
-# second composer install, or running Pest, while the first install is still
-# rewriting the shared vendor volume can leave a broken autoloader.
+# second composer install while the first is still running breaks both (they
+# share the download cache: "corrupted zip archive"), the startup one fails,
+# the container exits, and this script's install dies with it (exit 137).
+#
+# PID 1's *name* (/proc/1/comm), not its command line: the shell's command
+# line contains the words "exec php-fpm" from the very start.
 # --------------------------------------------------------------------------
 php_ready() {
-    docker compose exec -T php grep -q php-fpm /proc/1/cmdline >/dev/null 2>&1
+    [ "$(docker compose exec -T php cat /proc/1/comm 2>/dev/null)" = "php-fpm" ]
 }
 
 have_pest() {
