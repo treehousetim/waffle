@@ -124,8 +124,9 @@ dev server and Caddy in Docker); remotely, a static host serves the files.
     `connect-src` and `form-action`, and nothing else.
   - **The app's Caddy answers the site's origin** (CORS preflight), and still
     never accepts a credentialed request from it.
-- **Build-time reads still use the site key**, on the GitHub runner, where it
-  is a secret.
+- **Build-time reads need no key**: the content site API is public and
+  read-only (docs/content.md, "Site API"), so a build on a GitHub runner
+  reads it as anyone could.
 - **Headers the host cannot set.** The content security policy is in every
   page (Astro writes it), so it works on any host. What only a header can
   carry (refusing to be framed, HSTS) depends on the host; record what yours

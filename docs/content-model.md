@@ -1,7 +1,11 @@
 # The content model
 
-**Status: decided 2026-10-19; partly built** (docs/content.md has what
-exists: publishing, revisions, slugs, posts, the site API, change notices). It ships
+**Status: decided 2026-10-19; mostly built** (docs/content.md has what
+exists: publishing, revisions, slugs, posts, pages of blocks, media and
+images in a record's own fields, the site API and change notices;
+docs/forms.md has the sites and their form submissions). Still to come:
+terms and hubs, the publish bar's minimums as settings sent with the
+records, and media in object storage. It ships
 **in the skeleton**, as the backend every derived project starts with (the
 tables, publishing, the site API), built on the skeleton's queue
 (docs/queue.md). Any editing screens it brings are plain and unstyled: the look
