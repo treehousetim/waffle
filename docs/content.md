@@ -193,13 +193,38 @@ both, a stolen token can at most ask for a rebuild of what is already
 released. `SITE_REPOSITORY` ships
 empty in `docker-compose.prod.yml`; a project with a site writes its own there.
 
-**Adding a record type.** A migration making `<t>`, `<t>_revisions` and
-`<t>_slugs` exactly as `posts` has them, plus the type's own columns; a
-`record_type:<t>` definition in the slice's container fragment, with a
-`RecordFields` for its own columns (parse, present, what publishing needs);
-its page in the frontend router (`ContentView` with its `fields`). The
-routes, the site API and change notices follow from the declaration. KAW
-Meetup's `events` is the worked example.
+## Adding a record type
+
+The routes, the site API, revisions, slugs and change notices all follow from
+the declaration; what a type adds is its table, its fields and its page.
+KAW Meetup's `events` is the worked example (a Markdown body, times, links
+and a cover image).
+
+1. **Its failure list first**, in `docs/<type>.md`: what its own fields must
+   and must not accept, and what publishing needs from them
+   (docs/adding-a-feature.md has the template).
+2. **A migration** making `<t>`, `<t>_revisions` and `<t>_slugs` exactly as
+   `posts` has them (or `pages`, for a body of blocks), plus a real column
+   `<t>_<field>` for each field of its own. A field naming an image is
+   `INT UNSIGNED NULL` with a foreign key to `media`.
+3. **A `RecordFields`** in `Domain/<Slice>/`: `names()` (the column
+   suffixes), `parse()` (checks a request; `ContentText` has the helpers:
+   `optionalLine`, `optionalHttpsUrl`, `optionalImage`), `present()` (what
+   the API and the site get), `publishProblems()` (what publishing needs),
+   and `images()` (the fields naming images, by the name the site gets each
+   under; `[]` for none). Unit-test it against the failure list.
+4. **A `record_type:<t>` definition** in the slice's container fragment:
+   `new RecordType('<t>', '<singular>', '<label>', new <Type>Fields(...))` (the table; one record, for the history tables' keys: `event`; one record, for people),
+   with `body: BodyFormat::Blocks` for a body of blocks.
+5. **Its page** in the frontend router: `ContentView` with `type`, `label`
+   and `fields`, each `{ name, label, input }`, where `input` is an HTML input
+   type (`text` by default, `url`, `datetime-local`) or `image` (a choice from
+   the media library), and `listTimeField` to show a time in the list.
+6. **Feature tests** through the router: create, publish, the site API's
+   answer, and the publish bar's refusals.
+7. **The site's half** (Waffle Site's docs/data-pages.md): a content loader
+   for `/api/site/<t>` and `/retired`, a parser for its fields, its pages,
+   and their entries in the page manifest, so a change notice rebuilds them.
 
 ## Development data
 
