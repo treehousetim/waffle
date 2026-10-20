@@ -121,6 +121,7 @@ uses()->group('forms')->in(
     'Unit/Domain/Forms',
     'Unit/Libraries/Forms',
     'Feature/FormsTest.php',
+    'Feature/E2E/JoiningJourneyTest.php',
 );
 
 // The invitations slice (docs/invitations.md).
@@ -138,6 +139,7 @@ uses()->group('content')->in(
     'Feature/ContentTest.php',
     'Feature/SiteContentTest.php',
     'Feature/PagesTest.php',
+    'Feature/E2E/PublishingJourneyTest.php',
     'Schema/ContentTransactionTest.php',
 );
 
