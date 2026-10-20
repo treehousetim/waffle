@@ -5,6 +5,15 @@ Each starts with where it was settled. Newest moves at the top.
 
 ---
 
+## The content model: module or core?
+
+**Resolved 2026-10-19 by the owner, reversing the module decision below:** in
+the skeleton. A derived project starts with a working backend (the tables,
+publishing, the site API a Waffle Site reads), and only its look and feel is
+its own. Editing screens that ship with it stay plain and unstyled. It is
+built first in KAW Meetup, the first real project, and brought back from
+there.
+
 ## When is v1?
 
 **Resolved 2026-10-19 by the owner:** after a real project built with Waffle,
@@ -37,7 +46,8 @@ when the feature is built (AGENTS.md §2).
 
 ## The content model's open choices
 
-**Resolved 2026-10-19 by the owner** (docs/content-model.md): it ships as a
+**Resolved 2026-10-19 by the owner** (docs/content-model.md; where it ships
+was later reversed: see "module or core?" above): it ships as a
 Waffle Iron module, not in the skeleton. Posts are Markdown; pages, and any
 record type that needs more than prose, are structured blocks from a fixed
 set. The publish bar lives in the app and is sent to the site. Media is in

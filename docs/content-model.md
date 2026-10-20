@@ -1,8 +1,11 @@
 # The content model
 
 **Status: decided 2026-10-19, not built.** No table here exists yet. It ships
-as a **Waffle Iron module** (an app without a site never needs it), built on
-the skeleton's queue (docs/queue.md). This is the shape every app uses for
+**in the skeleton**, as the backend every derived project starts with (the
+tables, publishing, the site API), built on the skeleton's queue
+(docs/queue.md). Any editing screens it brings are plain and unstyled: the look
+and feel is each project's own. It is being built first in KAW Meetup, the
+first real project, as a `content` slice, and brought back from there. This is the shape every app uses for
 anything a site publishes (docs/setups.md, setups 2 to 4), so that agents
 build it the same way each time and Waffle Site can rely on it. The decisions
 are recorded in RESOLVED_QUESTIONS.md.
@@ -244,8 +247,8 @@ site (Waffle Site's docs/waffle-api.md).
 
 ## Building it
 
-A Waffle Iron module (docs/modules.md), built after the skeleton's queue
-(docs/queue.md), as a slice per piece: the publish state machine, revisions
+A slice of the skeleton (`content`), built first in KAW Meetup and brought
+back, after the queue (docs/queue.md), piece by piece: the publish state machine, revisions
 and slugs first; then blocks and their parser; terms; media and
 `StoragePort`; form submissions; sites. Each starts with its failure list and
 tests. A new record type is added by an agent following this document; there
