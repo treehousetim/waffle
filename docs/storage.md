@@ -7,7 +7,10 @@ Files the app keeps: uploads, photos, and the media of the content model
 
 - **On the local disk today**: `LocalDiskStorage`, under `/var/www/storage`,
   which every stack mounts from the `storage_data` volume (php and worker), so
-  a deploy never touches the files. A file is written to a temporary name and
+  a deploy never touches the files. The image creates the mount point owned
+  by `www-data`, the user php-fpm runs as, so a new volume starts out
+  writable; a volume made before that needs
+  `docker compose exec php chown www-data:www-data /var/www/storage` once. A file is written to a temporary name and
   renamed into place, so nobody reads half of one.
 - **Object storage later**: an S3-compatible adapter (DigitalOcean Spaces)
   replaces it behind the same port when a project needs one; no caller
@@ -20,4 +23,4 @@ Files the app keeps: uploads, photos, and the media of the content model
 ## Failure list
 
 1. A key that could leave the storage root (`../`, an absolute path) reaches the disk.
-2. A file that cannot be stored (a file or directory in the way) fails with a PHP warning, or leaves half a file, instead of an exception that says what.
+2. A file that cannot be stored (a file or directory in the way, or a volume the app's user cannot write to) fails with a PHP warning, or is reported stored, or leaves half a file, instead of an exception that says what.

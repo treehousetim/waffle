@@ -32,4 +32,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ARG PHP_INI=php.ini
 COPY ${PHP_INI} /usr/local/etc/php/php.ini
 
+# The storage volume's mount point, owned by the user php-fpm runs as, so a
+# new storage_data volume starts out writable by the app (docs/storage.md).
+RUN mkdir -p /var/www/storage && chown www-data:www-data /var/www/storage
+
 WORKDIR /var/www

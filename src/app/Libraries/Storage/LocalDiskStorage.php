@@ -37,13 +37,20 @@ final readonly class LocalDiskStorage implements StoragePort
             throw new RuntimeException("Could not store {$key}: a directory is in the way.");
         }
 
-        if (!is_dir($directory)) {
-            mkdir($directory, 0o775, true);
+        // Every step's result is checked: PHP only warns when it cannot write
+        // (a volume the app's user does not own), and a warning is not an
+        // answer. Without this the caller is told the file was stored.
+        if (!is_dir($directory) && !self::quietly(static fn (): bool => mkdir($directory, 0o775, true)) && !is_dir($directory)) {
+            throw new RuntimeException("Could not create {$directory}: can the app's user write to the storage volume?");
         }
 
         $temporary = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
-        file_put_contents($temporary, $bytes);
-        rename($temporary, $path);
+
+        if (!self::quietly(static fn (): bool => file_put_contents($temporary, $bytes) !== false && rename($temporary, $path))) {
+            self::quietly(static fn (): bool => !is_file($temporary) || unlink($temporary));
+
+            throw new RuntimeException("Could not store {$key}: can the app's user write to the storage volume?");
+        }
     }
 
     public function get(string $key): ?string
@@ -65,6 +72,23 @@ final readonly class LocalDiskStorage implements StoragePort
 
         if (is_file($path)) {
             unlink($path);
+        }
+    }
+
+    /**
+     * Runs a file operation with PHP's warnings turned into its answer: false
+     * when it failed, and nothing printed or logged on the way.
+     *
+     * @param \Closure(): bool $operation
+     */
+    private static function quietly(\Closure $operation): bool
+    {
+        set_error_handler(static fn (): bool => true);
+
+        try {
+            return $operation();
+        } finally {
+            restore_error_handler();
         }
     }
 

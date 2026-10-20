@@ -39,6 +39,14 @@ it('says so when it cannot store a file, and leaves no half-written one (2)', fu
         ->toThrow(RuntimeException::class, 'Could not create');
 });
 
+it('says so when it cannot write where it stores, rather than reporting success (2)', function (): void {
+    // /proc refuses new files even to root, which the suite runs as.
+    expect(fn () => (new LocalDiskStorage('/proc/waffle-storage'))->put('photos/7.jpg', 'x'))
+        ->toThrow(RuntimeException::class, 'Could not create /proc/waffle-storage/photos: can the app\'s user write to the storage volume?')
+        ->and(fn () => (new LocalDiskStorage('/proc'))->put('x', 'x'))
+        ->toThrow(RuntimeException::class, 'Could not store x: can the app\'s user write to the storage volume?');
+});
+
 it('says so when the directory is there but the file cannot be written (2)', function (): void {
     $root = storageRoot();
     mkdir($root . '/photos/7.jpg', 0o775, true);
