@@ -41,6 +41,7 @@ Found by a review of what KAW Meetup built, and fixed there first.
 - **`/api/%73ite/` was given a session**; `SessionCookie::wantedFor()` decodes the path first.
 
 ### Fixed
+- **The session cookie is the project's own** (`waffle_session`, which `tools/rename-project.sh` makes `<slug>_session`), not PHP's `PHPSESSID`: two apps run side by side on localhost shared one cookie, since cookies ignore the port, and signed each other out. Signing in again is needed once after the change. Porting: `SessionCookie::NAME` and the `session_name()` line in `src/public/index.php`.
 - **A public image must stay described**: blanking its alt text or dropping a credit its licence needs is refused, since the change notice it sends would start a site build that fails (`MediaLibrary::describe()`).
 - **Links are https:// in printable ASCII** (`ContentText::optionalHttpsUrl()`, used for credit links): a pasted non-breaking space passed the app's check and failed the site's.
 - **A revision holding a field its type has since lost** restores without writing a missing column; `used_by` also counts what the site shows. Found by a review of KAW Meetup's media work. Porting: `ContentText.php`, `MediaDetails.php`, `MediaLibrary.php`, `Publishing.php`, `RecordRepository.php`.

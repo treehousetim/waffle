@@ -28,6 +28,9 @@ if (session_status() === PHP_SESSION_NONE && App\Domain\Auth\SessionCookie::want
      */
     ini_set('session.use_strict_mode', '1');
 
+    // Named for the project, so another app on the same host keeps its own.
+    session_name(App\Domain\Auth\SessionCookie::NAME);
+
     session_start();
 }
 

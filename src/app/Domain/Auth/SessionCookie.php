@@ -19,6 +19,14 @@ namespace App\Domain\Auth;
 final readonly class SessionCookie
 {
     /**
+     * The cookie's name: the project's, not PHP's PHPSESSID
+     * (tools/rename-project.sh makes it `<slug>_session`). Cookies ignore the
+     * port, so two apps run side by side on localhost would otherwise share
+     * one cookie and sign each other out.
+     */
+    public const string NAME = 'waffle_session';
+
+    /**
      * Whether a request to this path gets a session at all. The site API
      * (`/api/site/`) never does: a site's visitors and builds are not people
      * signed in to the app, and must never be handed a session cookie

@@ -99,6 +99,15 @@ it('gives the session cookie every attribute it was missing', function (): void 
         ->and($params['lifetime'])->toBe(0);
 });
 
+it('names the session cookie for the project, so two apps on one host keep their own sessions', function (): void {
+    // Cookies ignore the port: two apps on localhost:8080 and :8091 under
+    // PHP's PHPSESSID share one cookie and sign each other out.
+    $index = (string) file_get_contents(dirname(__DIR__, 4) . '/src/public/index.php');
+
+    expect(SessionCookie::NAME)->toMatch('/^[a-z][a-z0-9_]*_session$/')
+        ->and($index)->toContain('session_name(App\\Domain\\Auth\\SessionCookie::NAME);');
+});
+
 it('leaves Secure off when the request is not over TLS', function (): void {
     /*
      * Local development is plain HTTP on a loopback port, and a Secure cookie
