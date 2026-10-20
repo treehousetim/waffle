@@ -26,7 +26,9 @@ nothing.
    minutes, or 429. The address comes from `X-Visitor-Address`, which the
    site's Caddy writes (never `X-Forwarded-For`: the app's own Caddy rewrites
    that to the site server's address). It is never stored: only a keyed hash
-   of it with the date and the site, which changes daily.
+   of it with the date and the site, which changes daily. The count and the
+   insert are not one atomic step, so a burst sent in the same instant can
+   get one or two past the limit; the limit is against floods, not exact.
 5. The form's parser checks every field (`Domain/Forms`); a refusal is 422
    with an `error` and a message per field.
 6. The submission is kept as `new`, with the fields as the parser returned
