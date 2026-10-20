@@ -7,6 +7,8 @@ use App\Controllers\SiteContentController;
 use App\Domain\Content\RecordFields;
 use App\Domain\Content\RecordType;
 use App\Domain\Content\RecordTypes;
+use App\Domain\Content\ChangeNotice;
+use App\Domain\Ports\QueuePort;
 use App\Domain\Ports\StoragePort;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Psr7\Factory\StreamFactory;
@@ -158,4 +160,29 @@ it('checks, publishes and hands the site an image a record type\'s own field nam
         ->and($this->json($refused)['error'])->toBe("This cannot be published yet. Image {$id} needs a description (alt text).")
         ->and($site['cover'])->toMatchArray(['id' => $id, 'path' => "/api/site/media/{$id}.jpg", 'alt' => 'Sample: a cover'])
         ->and($this->get("/api/site/media/{$id}.jpg")->getStatusCode())->toBe(200);
+});
+
+it('tells the site when a public image\'s description changes, naming the published pages that show it (28)', function (): void {
+    $this->asAdministrator();
+    $queue = TestCase::container()->get(QueuePort::class);
+    $notices = static fn (): array => array_map(static fn (array $queued): array => $queued['job']->changes, array_values(array_filter(
+        $queue->enqueued,
+        static fn (array $queued): bool => $queued['job'] instanceof ChangeNotice,
+    )));
+    $shown = $this->json(($this->upload)(TestImages::jpeg(640, 480)))['data']['media']['id'];
+    $unused = $this->json(($this->upload)(TestImages::jpeg(320, 240)))['data']['media']['id'];
+    $this->put("/api/content/media/{$shown}", ['alt' => 'Sample: first words']);
+    $page = $this->json($this->post('/api/content/pages', ['title' => 'Shows it', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $shown]]]))['data']['record']['id'];
+    $this->post('/api/content/pages', ['title' => 'Draft with it', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $shown]]]);
+    $this->post("/api/content/pages/{$page}/publish");
+    $queue->enqueued = [];
+
+    $this->put("/api/content/media/{$unused}", ['alt' => 'Sample: never shown']);
+    $afterUnused = $notices();
+    $described = $this->put("/api/content/media/{$shown}", ['alt' => 'Sample: better words', 'licence' => 'licensed', 'credit_name' => 'Sample Person']);
+
+    expect($afterUnused)->toBe([])
+        ->and($described->getStatusCode())->toBe(200)
+        ->and($notices())->toBe([['pages' => ['shows-it']]])
+        ->and(array_column($this->json($this->get('/api/site/pages'))['data']['records'], null, 'slug')['shows-it']['body'][0]['media']['alt'])->toBe('Sample: better words');
 });

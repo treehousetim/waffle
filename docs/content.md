@@ -94,7 +94,9 @@ cannot be published. When a record using an image is first published, the
 image becomes public: the site API carries, for each image block, its path
 (`/api/site/media/<id>.jpg`), size, alt text, caption and credit, and that
 path serves the file to anyone. It stays public, so an older release of the
-site never loses a picture.
+site never loses a picture. Changing a public image's alt text, caption or
+credit changes the pages that show it, so it queues a change notice naming
+every published record that uses it (see "Change notices").
 
 A record type's own fields may name images too, such as an event's cover:
 its `RecordFields::images()` says which, by the name the site API gives each
@@ -155,7 +157,8 @@ Every publish, retire and restore queues a **change notice** in the same
 transaction (docs/queue.md): the record type and the slugs whose pages
 changed. A publish names the record's slug, and the slug it was last
 published under when that differs (that page becomes a redirect); a retire
-names every slug the record ever had (each now answers 410). Saving a draft
+names every slug the record ever had (each now answers 410). Describing a
+public image names every published record that shows it. Saving a draft
 sends nothing. The job (`site-change-notice`) runs a minute later, so changes
 made close together reach the site as one notice: a pending notice absorbs
 newer ones, slugs unioned by type.
@@ -221,3 +224,4 @@ Meetup's `events` is the worked example.
 25. The same picture uploaded twice becomes two images.
 26. An image no published record has used is served to anyone.
 27. A revision published before its type gained a field breaks the site API or a restore.
+28. A public image's description changes and the pages showing it are not rebuilt, so the site keeps an old credit or alt text.

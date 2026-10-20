@@ -12,10 +12,12 @@ use App\Domain\Content\InvalidContent;
 use App\Domain\Content\PublishBar;
 use App\Domain\Content\PublishStatus;
 use App\Domain\Content\RecordType;
+use App\Domain\Content\RecordTypes;
 use App\Domain\Content\Slug;
 use App\Domain\Ports\ClockPort;
 use App\Domain\Ports\QueuePort;
 use App\Domain\Status\IllegalTransition;
+use App\Models\Content\Media;
 use App\Models\Content\Record;
 use App\Models\Content\RecordRepository;
 use PDOException;
@@ -150,6 +152,33 @@ final readonly class Publishing
         });
     }
 
+    /**
+     * Describes an image (docs/content.md, "Media"). A public image is on
+     * published pages, which change with its alt text, caption or credit:
+     * each record showing it is named in a change notice, in the same
+     * transaction (28.).
+     *
+     * @param array<string,mixed> $input
+     *
+     * @throws InvalidContent|ContentNotFound
+     */
+    public function describeImage(RecordTypes $types, int $id, array $input): Media
+    {
+        $media = $this->media ?? throw new \LogicException('Images need the media library.');
+
+        return $this->records->transactional(function () use ($media, $types, $id, $input): Media {
+            $described = $media->describe($id, $input);
+
+            if ($described->publicAt !== null) {
+                foreach ($types->all() as $type) {
+                    $this->noticeShowing($type, $id);
+                }
+            }
+
+            return $described;
+        });
+    }
+
     private function publishLocked(RecordType $type, Record $record, int $actor): Record
     {
         $images = $this->mediaIds($type, $record->body, $record->fields);
@@ -191,6 +220,22 @@ final readonly class Publishing
         $inBody = $type->body === BodyFormat::Blocks ? Blocks::mediaIds($type->body->present($body)) : [];
 
         return array_values(array_unique([...$inBody, ...array_filter($type->fields->images($fields), static fn (?int $id): bool => $id !== null)]));
+    }
+
+    /** Names, in a change notice, every published record of a type that shows an image. */
+    private function noticeShowing(RecordType $type, int $mediaId): void
+    {
+        $slugs = [];
+
+        foreach ($this->records->published($type) as $revision) {
+            if (in_array($mediaId, $this->mediaIds($type, $revision->content['body'], $revision->content['fields']), true)) {
+                $slugs[] = $revision->content['slug'];
+            }
+        }
+
+        if ($slugs !== []) {
+            $this->notice($type, $slugs);
+        }
     }
 
     /** @param list<string> $slugs */

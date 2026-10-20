@@ -72,6 +72,8 @@ return [
         $c->get(MediaLibrary::class),
         $c->get(MediaRepository::class),
         $c->get(IdentityPort::class),
+        $c->get(Publishing::class),
+        $c->get(RecordTypes::class),
     )),
 
     // Change notices (docs/content.md): a repository_dispatch to the site's

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Domain\Content\InvalidContent;
+use App\Domain\Content\RecordTypes;
 use App\Domain\Ports\IdentityPort;
 use App\Libraries\Content\ContentNotFound;
 use App\Libraries\Content\MediaLibrary;
+use App\Libraries\Content\Publishing;
 use App\Libraries\Http\JsonResponder;
 use App\Models\Content\Media;
 use App\Models\Content\MediaRepository;
@@ -25,6 +27,8 @@ final class MediaController extends BaseController
         private readonly MediaLibrary $library,
         private readonly MediaRepository $media,
         private readonly IdentityPort $identity,
+        private readonly Publishing $publishing,
+        private readonly RecordTypes $types,
     ) {
         parent::__construct($json);
     }
@@ -46,10 +50,11 @@ final class MediaController extends BaseController
         return $this->jsonSuccess($response, ['media' => $media->toArray()], 201);
     }
 
+    /** A public image's new description reaches the site through a change notice. */
     public function describe(ServerRequestInterface $request, ResponseInterface $response, string $id): ResponseInterface
     {
         try {
-            $media = $this->library->describe(self::id($id), $this->body($request));
+            $media = $this->publishing->describeImage($this->types, self::id($id), $this->body($request));
         } catch (ContentNotFound $e) {
             return $this->jsonError($response, $e->getMessage(), 404);
         } catch (InvalidContent $e) {
