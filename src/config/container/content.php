@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 use App\Controllers\ContentController;
 use App\Controllers\SiteContentController;
+use App\Domain\Content\BodyFormat;
 use App\Domain\Content\RecordType;
 use App\Domain\Content\RecordTypes;
 use App\Domain\Ports\ClockPort;
@@ -37,6 +38,7 @@ return [
     ))),
 
     'record_type:posts' => factory(static fn (): RecordType => new RecordType('posts', 'post', 'post')),
+    'record_type:pages' => factory(static fn (): RecordType => new RecordType('pages', 'page', 'page', body: BodyFormat::Blocks)),
 
     RecordRepository::class => factory(
         static fn (PDO $pdo, TypeRepository $types): RecordRepository => new RecordRepository($pdo, $types)

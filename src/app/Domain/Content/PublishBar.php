@@ -20,8 +20,8 @@ final class PublishBar
     {
         $problems = [];
 
-        foreach (['a title' => $title, 'a summary' => $summary, 'a body' => $body] as $what => $value) {
-            if (trim($value) === '') {
+        foreach (['a title' => trim($title) === '', 'a summary' => trim($summary) === '', 'a body' => $type->body->isEmpty($body)] as $what => $missing) {
+            if ($missing) {
                 $problems[] = "It needs {$what}.";
             }
         }

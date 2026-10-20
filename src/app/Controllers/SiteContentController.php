@@ -71,7 +71,7 @@ final class SiteContentController extends BaseController
             'slug' => $content['slug'],
             'title' => $content['title'],
             'summary' => $content['summary'],
-            'body' => $content['body'],
+            'body' => $type->body->present($content['body']),
             'seo_title' => $content['seo_title'],
             'seo_description' => $content['seo_description'],
             ...$type->fields->present($content['fields']),

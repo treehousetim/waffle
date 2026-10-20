@@ -21,6 +21,8 @@ const UNGUARDED = [
     // The site API: public, read-only, published content only (docs/content.md).
     'GET /api/site/posts',
     'GET /api/site/posts/retired',
+    'GET /api/site/pages',
+    'GET /api/site/pages/retired',
     // An invitation link: the token is the permission (docs/invitations.md).
     'GET /api/invite/{token}',
     'POST /api/invite/{token}/accept',

@@ -31,3 +31,13 @@ test('gives a date-and-time field the local time without its offset', () => {
   assert.equal(draft.starts_at, '2026-11-12T18:30')
   assert.equal(draft.ends_at, '')
 })
+
+test('starts a page with no blocks, and copies the blocks it is given', () => {
+  assert.deepEqual(emptyDraft([], true).body, [])
+
+  const record = { body: [{ type: 'heading', level: 2, text: 'A' }] }
+  const draft = draftFrom(record)
+  draft.body[0].text = 'changed'
+
+  assert.equal(record.body[0].text, 'A')
+})

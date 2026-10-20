@@ -43,6 +43,13 @@ export const routes = [
     meta: { title: 'Posts', permission: 'content-edit', nav: true }
   },
   {
+    path: '/pages',
+    name: 'pages',
+    component: () => import('@/views/ContentView.vue'),
+    props: { type: 'pages', label: 'Pages', blocks: true },
+    meta: { title: 'Pages', permission: 'content-edit', nav: true }
+  },
+  {
     path: '/invitations',
     name: 'invitations',
     component: () => import('@/views/InvitationsView.vue'),

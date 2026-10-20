@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 import client, { unwrap } from '@/api/client'
+import BlocksEditor from '@/components/BlocksEditor.vue'
 import { useAuthStore } from '@/stores/auth'
 import { draftFrom, emptyDraft, statusLabel } from '@/utils/content'
 import { apiErrorMessage } from '@/utils/errors'
@@ -15,7 +16,9 @@ import { apiErrorMessage } from '@/utils/errors'
 const props = defineProps({
   type: { type: String, required: true },
   label: { type: String, required: true },
-  fields: { type: Array, default: () => [] }
+  fields: { type: Array, default: () => [] },
+  /** Whether the body is blocks (pages) rather than Markdown. */
+  blocks: { type: Boolean, default: false }
 })
 
 const auth = useAuthStore()
@@ -25,7 +28,7 @@ const records = ref([])
 const selected = ref(null)
 const revisions = ref([])
 const slugs = ref([])
-const draft = ref(emptyDraft(props.fields))
+const draft = ref(emptyDraft(props.fields, props.blocks))
 const error = ref('')
 const notice = ref('')
 const busy = ref(false)
@@ -51,7 +54,7 @@ function startNew() {
   selected.value = null
   revisions.value = []
   slugs.value = []
-  draft.value = emptyDraft(props.fields)
+  draft.value = emptyDraft(props.fields, props.blocks)
   error.value = ''
   notice.value = ''
 }
@@ -119,7 +122,8 @@ onMounted(load)
           {{ field.label }}
           <input v-model="draft[field.name]" :type="field.input ?? 'text'" />
         </label>
-        <label>Body (Markdown) <textarea v-model="draft.body" rows="16" /></label>
+        <BlocksEditor v-if="blocks" v-model="draft.body" />
+        <label v-else>Body (Markdown) <textarea v-model="draft.body" rows="16" /></label>
         <label>SEO title <input v-model="draft.seo_title" maxlength="60" /></label>
         <label>SEO description <textarea v-model="draft.seo_description" maxlength="160" rows="2" /></label>
         <div class="actions">

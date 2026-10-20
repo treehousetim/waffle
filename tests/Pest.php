@@ -130,6 +130,7 @@ uses()->group('content')->in(
     'Unit/Libraries/Content',
     'Feature/ContentTest.php',
     'Feature/SiteContentTest.php',
+    'Feature/PagesTest.php',
     'Schema/ContentTransactionTest.php',
 );
 

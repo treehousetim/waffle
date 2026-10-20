@@ -37,7 +37,7 @@ final readonly class Draft
             $slugRequired || (is_string($slug) && trim($slug) !== '') ? Slug::check($slug) : null,
             ContentText::title($input['title'] ?? null),
             ContentText::summary($input['summary'] ?? null),
-            Markdown::check($input['body'] ?? null),
+            $type->body->check($input['body'] ?? null),
             ContentText::seoTitle($input['seo_title'] ?? null),
             ContentText::seoDescription($input['seo_description'] ?? null),
             $type->fields->parse($input),

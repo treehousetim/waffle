@@ -62,7 +62,7 @@ final readonly class Record
             'slug' => $this->slug,
             'title' => $this->title,
             'summary' => $this->summary,
-            'body' => $this->body,
+            'body' => $type->body->present($this->body),
             'seo_title' => $this->seoTitle,
             'seo_description' => $this->seoDescription,
             ...$type->fields->present($this->fields),

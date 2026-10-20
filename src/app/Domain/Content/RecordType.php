@@ -25,6 +25,8 @@ final readonly class RecordType
         /** One record, for people: `Post`. */
         public string $label,
         public RecordFields $fields = new NoFields(),
+        /** Markdown for prose; blocks for pages (docs/content-model.md, principle 2). */
+        public BodyFormat $body = BodyFormat::Markdown,
     ) {
         foreach ([$name, $singular, ...$fields->names()] as $identifier) {
             if (preg_match('/^[a-z][a-z0-9_]{0,40}$/', $identifier) !== 1) {

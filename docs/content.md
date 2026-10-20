@@ -5,10 +5,10 @@ slice, the built part of docs/content-model.md. Built first in KAW Meetup, the
 first real project, and brought back. An app with no site (setup 1) can
 ignore it: nothing is published unless someone publishes it.
 
-**Built so far:** publishing (the state machine, revisions, slugs), the first
-record type, `posts`, the site API that reads them, and change notices.
-**Still to come:** blocks and `pages`; terms; media; sites and form
-submissions.
+**Built so far:** publishing (the state machine, revisions, slugs), `posts`
+(Markdown) and `pages` (blocks), the site API that reads them, and change
+notices. **Still to come:** media (and with it image and gallery blocks);
+terms; sites and form submissions.
 docs/content-model.md is the design for all of it.
 
 ## How it works
@@ -48,6 +48,29 @@ docs/content-model.md is the design for all of it.
   and no top-level heading (the title is the page's `<h1>`: sections start at
   `##`); links go to a path on the site (`/events`), an anchor, `https://` or
   `mailto:`.
+
+## Blocks
+
+A record type declared with `body: BodyFormat::Blocks` (`pages`) has a body
+that is an ordered list of typed blocks from one fixed set
+(`App\Domain\Content\Blocks`), stored as JSON and given back as the list.
+A block of any other type, or with a field its type does not take, is
+refused, naming the block (22.). The site renders each type with its own
+component.
+
+| Type | Fields |
+| --- | --- |
+| `heading` | `level` (2, 3 or 4), `text` (at most 150) |
+| `text` | `markdown` (at most 20,000; no headings: they are blocks) |
+| `quote` | `text` (at most 1,000), `cite` (optional) |
+| `callout` | `tone` (`note` or `warning`), `markdown` (at most 5,000) |
+| `faq` | `items`: 1 to 50 of `question` (at most 300) and `answer` (Markdown) |
+| `cta` | `label` (at most 60), `path` (a page on this site: `/events/`), `note` (optional) |
+| `table` | `columns` (1 to 10), `rows` (at most 100, each as wide as the columns; plain text cells) |
+
+Markdown in a block follows the body rules (no HTML, safe links). A body has
+at most 200 blocks, and a page with none cannot be published. Images and
+galleries come with the media library.
 
 ## Permissions
 
@@ -146,3 +169,4 @@ Meetup's `events` is the worked example.
 19. A change to what the site shows queues no notice, queues one without the change (or the change without one), or names a slug the change did not touch.
 20. Several changes close together send several notices, and the site runs overlapping builds.
 21. Without a site configured, production loses notices silently.
+22. A block body holds a block of a type outside the set, a field its type does not take, HTML, or a heading inside text.

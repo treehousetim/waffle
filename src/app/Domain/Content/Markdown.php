@@ -20,10 +20,15 @@ final class Markdown
 {
     public const int MAX = 60_000;
 
-    /** @throws InvalidContent */
-    public static function check(mixed $raw, string $what = 'body'): string
+    /**
+     * @param bool $headings whether `##` and lower may appear: a block of text
+     *                       has none, because headings are their own blocks
+     *
+     * @throws InvalidContent
+     */
+    public static function check(mixed $raw, string $what = 'body', bool $headings = true, int $max = self::MAX): string
     {
-        $text = ContentText::multiline($raw, $what, self::MAX);
+        $text = ContentText::multiline($raw, $what, $max);
         $prose = self::withoutCode($text);
 
         if (preg_match('/<(?!(?:https:\/\/|mailto:)[^>\s]*>)[A-Za-z!?\/]/', $prose) === 1) {
@@ -32,6 +37,10 @@ final class Markdown
 
         if (preg_match('/^ {0,3}#(?:[ \t]|$)|^ {0,3}=+[ \t]*$/m', $prose) === 1) {
             throw InvalidContent::because("The {$what} holds a top-level heading (# or ===). The title is the page's heading: start sections at ## instead.");
+        }
+
+        if (!$headings && preg_match('/^ {0,3}#{1,6}(?:[ \t]|$)|\S[^\n]*\n {0,3}(?:=+|-+)[ \t]*$/m', $prose) === 1) {
+            throw InvalidContent::because("The {$what} holds a heading. Headings are blocks of their own.");
         }
 
         if (preg_match('/!\[[^\]]*\]\(/', $prose) === 1) {
