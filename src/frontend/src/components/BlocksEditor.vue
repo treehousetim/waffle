@@ -81,12 +81,13 @@ function setTable(block, text) {
             <option v-for="item in library" :key="item.id" :value="item.id">{{ imageLabel(item) }}</option>
           </select>
         </label>
+        <img v-if="block.media_id" class="chosen" :src="`/api/content/media/${block.media_id}/file`" alt="" width="160" />
         <label>Caption <input v-model="block.caption" maxlength="300" /></label>
       </template>
       <template v-else-if="block.type === 'gallery'">
         <fieldset>
           <legend>Images (2 to 24, from Media)</legend>
-          <label v-for="item in library" :key="item.id"><input v-model="block.media_ids" type="checkbox" :value="item.id" /> {{ imageLabel(item) }}</label>
+          <label v-for="item in library" :key="item.id"><input v-model="block.media_ids" type="checkbox" :value="item.id" /> <img :src="`/api/content/media/${item.id}/file`" alt="" width="48" /> {{ imageLabel(item) }}</label>
         </fieldset>
         <label>Caption <input v-model="block.caption" maxlength="300" /></label>
       </template>

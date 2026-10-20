@@ -148,6 +148,7 @@ onMounted(() => {
             <option v-for="item in library" :key="item.id" :value="String(item.id)">{{ imageLabel(item) }}</option>
           </select>
           <input v-else v-model="draft[field.name]" :type="field.input ?? 'text'" />
+          <img v-if="field.input === 'image' && draft[field.name]" :src="`/api/content/media/${draft[field.name]}/file`" alt="" width="160" />
         </label>
         <BlocksEditor v-if="blocks" v-model="draft.body" />
         <label v-else>Body (Markdown) <textarea v-model="draft.body" rows="16" /></label>
