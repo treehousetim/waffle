@@ -127,8 +127,8 @@ onMounted(() => {
         <ul>
           <li v-for="record in records" :key="record.id">
             <a href="#" @click.prevent="open(record.id)">{{ record.title }}</a>
-            <small> {{ statusLabel(record.status) }}</small>
-            <small v-if="listTimeField && record[listTimeField]"> · {{ listTime(record[listTimeField]) }}</small>
+            <small>&nbsp;{{ statusLabel(record.status) }}</small>
+            <small v-if="listTimeField && record[listTimeField]">&nbsp;· {{ listTime(record[listTimeField]) }}</small>
           </li>
         </ul>
         <p v-if="records.length === 0">None yet.</p>
