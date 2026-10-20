@@ -46,4 +46,17 @@ interface RecordFields
      * @return list<string>
      */
     public function publishProblems(array $stored): array;
+
+    /**
+     * The images from the media library these fields name, by the name the
+     * site gets each under (`cover` => 7, or null when none is chosen). An
+     * image named here is checked like one in a block: it must exist to save,
+     * be described to publish, and becomes public when published
+     * (docs/content.md, "Media").
+     *
+     * @param array<string,string|int|null> $stored
+     *
+     * @return array<string,int|null>
+     */
+    public function images(array $stored): array;
 }

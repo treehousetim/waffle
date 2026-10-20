@@ -77,6 +77,26 @@ final class ContentText
         return self::optional($raw, $what, $max);
     }
 
+    /**
+     * An image from the media library that a record type names in its own
+     * field, such as a cover: its id, or null when empty. Whether it exists
+     * is the media library's to say, when the record is saved.
+     *
+     * @throws InvalidContent
+     */
+    public static function optionalImage(mixed $raw, string $what): ?int
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if ((is_int($raw) && $raw > 0) || (is_string($raw) && preg_match('/^[1-9][0-9]{0,9}$/', $raw) === 1)) {
+            return (int) $raw;
+        }
+
+        throw InvalidContent::because("The {$what} must be an image from the media library.");
+    }
+
     /** @throws InvalidContent */
     private static function optional(mixed $raw, string $what, int $max): ?string
     {

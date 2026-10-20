@@ -93,6 +93,11 @@ image becomes public: the site API carries, for each image block, its path
 path serves the file to anyone. It stays public, so an older release of the
 site never loses a picture.
 
+A record type's own fields may name images too, such as an event's cover:
+its `RecordFields::images()` says which, by the name the site API gives each
+(`cover`), and they are checked, made public and handed to the site exactly
+like an image block's. Parse such a field with `ContentText::optionalImage()`.
+
 | Route | Permission | Does |
 | --- | --- | --- |
 | `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs |

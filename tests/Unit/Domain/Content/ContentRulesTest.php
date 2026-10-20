@@ -40,6 +40,11 @@ function typeWithVenue(): RecordType
         {
             return $stored['venue'] === '' ? ['It needs a venue.'] : [];
         }
+
+        public function images(array $stored): array
+        {
+            return [];
+        }
     });
 }
 
@@ -171,6 +176,7 @@ it('names the tables and columns of a record type', function (): void {
         ->and($type->fields)->toBeInstanceOf(NoFields::class)
         ->and((new NoFields())->present([]))->toBe([])
         ->and((new NoFields())->parse(['x' => 1]))->toBe([])
+        ->and((new NoFields())->images([]))->toBe([])
         ->and(fn () => typeWithVenue()->fields->names())->not->toThrow(Throwable::class);
 });
 
@@ -202,3 +208,24 @@ it('reads a draft from a request, with its own fields', function (): void {
         ->and(Draft::parse(typeWithVenue(), ['title' => 'A', 'slug' => 'a-b'], false)->slug)->toBe('a-b')
         ->and(fn () => Draft::parse(typeWithVenue(), ['title' => 'A'], true))->toThrow(InvalidContent::class, 'The slug cannot be empty.');
 });
+
+it('reads an image a record type\'s own field names, such as a cover', function (mixed $raw, ?int $id): void {
+    expect(ContentText::optionalImage($raw, 'cover image'))->toBe($id);
+})->with([
+    'none' => ['', null],
+    'missing' => [null, null],
+    'a number' => [7, 7],
+    'a number as a form sends it' => ['12', 12],
+]);
+
+it('refuses a field image that is not an image id', function (mixed $raw): void {
+    expect(fn () => ContentText::optionalImage($raw, 'cover image'))
+        ->toThrow(InvalidContent::class, 'The cover image must be an image from the media library.');
+})->with([
+    'zero' => [0],
+    'negative' => [-3],
+    'words' => ['seven'],
+    'a leading zero' => ['07'],
+    'a fraction' => [1.5],
+    'a list' => [[7]],
+]);

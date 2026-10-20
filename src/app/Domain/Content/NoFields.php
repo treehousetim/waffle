@@ -26,4 +26,9 @@ final class NoFields implements RecordFields
     {
         return [];
     }
+
+    public function images(array $stored): array
+    {
+        return [];
+    }
 }

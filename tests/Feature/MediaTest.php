@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Controllers\ContentController;
+use App\Controllers\SiteContentController;
+use App\Domain\Content\RecordFields;
+use App\Domain\Content\RecordType;
+use App\Domain\Content\RecordTypes;
 use App\Domain\Ports\StoragePort;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Psr7\Factory\StreamFactory;
@@ -96,4 +101,61 @@ it('describes an image, refusing bad details, and answers 404 for none (24)', fu
         ->and($this->put('/api/content/media/999999', ['alt' => 'x'])->getStatusCode())->toBe(404)
         ->and($this->get('/api/content/media/999999/file')->getStatusCode())->toBe(404)
         ->and($this->get('/api/site/media/999999.jpg')->getStatusCode())->toBe(404);
+});
+
+it('checks, publishes and hands the site an image a record type\'s own field names (22, 24, 26)', function (): void {
+    $this->asAdministrator();
+    $id = $this->json(($this->upload)(TestImages::jpeg(1200, 630)))['data']['media']['id'];
+    // A stand-in for a project's own field naming an image, such as an event's
+    // cover: posts whose fields name one image, with no column of their own.
+    $withCover = fn (int $cover): RecordTypes => new RecordTypes(new RecordType('posts', 'post', 'post', new class ($cover) implements RecordFields {
+        public function __construct(private int $cover)
+        {
+        }
+
+        public function names(): array
+        {
+            return [];
+        }
+
+        public function parse(array $input): array
+        {
+            return [];
+        }
+
+        public function present(array $stored): array
+        {
+            return [];
+        }
+
+        public function publishProblems(array $stored): array
+        {
+            return [];
+        }
+
+        public function images(array $stored): array
+        {
+            return ['cover' => $this->cover];
+        }
+    }), TestCase::container()->get('record_type:pages'));
+    $use = function (RecordTypes $types): void {
+        $this->swap(RecordTypes::class, $types);
+        $this->swap(ContentController::class, TestCase::container()->make(ContentController::class));
+        $this->swap(SiteContentController::class, TestCase::container()->make(SiteContentController::class));
+    };
+    $post = ['title' => 'With a cover', 'summary' => 'S', 'body' => 'Text.'];
+
+    $use($withCover(999999));
+    $missing = $this->post('/api/content/posts', $post);
+    $use($withCover($id));
+    $record = $this->json($this->post('/api/content/posts', $post))['data']['record']['id'];
+    $refused = $this->post("/api/content/posts/{$record}/publish");
+    $this->put("/api/content/media/{$id}", ['alt' => 'Sample: a cover', 'licence' => 'own']);
+    $this->post("/api/content/posts/{$record}/publish");
+    $site = array_column($this->json($this->get('/api/site/posts'))['data']['records'], null, 'slug')['with-a-cover'];
+
+    expect($this->json($missing)['error'])->toBe('There is no image 999999 in the media library.')
+        ->and($this->json($refused)['error'])->toBe("This cannot be published yet. Image {$id} needs a description (alt text).")
+        ->and($site['cover'])->toMatchArray(['id' => $id, 'path' => "/api/site/media/{$id}.jpg", 'alt' => 'Sample: a cover'])
+        ->and($this->get("/api/site/media/{$id}.jpg")->getStatusCode())->toBe(200);
 });

@@ -52,7 +52,7 @@ final readonly class Publishing
     public function create(RecordType $type, array $input): Record
     {
         $draft = Draft::parse($type, $input, false);
-        $this->media?->assertExist($this->mediaIds($type, $draft->body));
+        $this->media?->assertExist($this->mediaIds($type, $draft->body, $draft->fields));
 
         return $this->records->transactional(function () use ($type, $draft): Record {
             $slug = $draft->slug ?? $this->freeSlug($type, Slug::suggest($draft->title));
@@ -78,7 +78,7 @@ final readonly class Publishing
     public function update(RecordType $type, int $id, array $input): Record
     {
         $draft = Draft::parse($type, $input, true);
-        $this->media?->assertExist($this->mediaIds($type, $draft->body));
+        $this->media?->assertExist($this->mediaIds($type, $draft->body, $draft->fields));
 
         return $this->records->transactional(function () use ($type, $id, $draft): Record {
             $record = $this->lock($type, $id);
@@ -152,7 +152,7 @@ final readonly class Publishing
 
     private function publishLocked(RecordType $type, Record $record, int $actor): Record
     {
-        $images = $this->mediaIds($type, $record->body);
+        $images = $this->mediaIds($type, $record->body, $record->fields);
         $problems = [...PublishBar::problems($type, $record->title, $record->summary, $record->body, $record->fields), ...($this->media?->problems($images) ?? [])];
 
         if ($problems !== []) {
@@ -179,13 +179,18 @@ final readonly class Publishing
     }
 
     /**
-     * The images a body of blocks names; none for Markdown.
+     * The images a record uses: those its blocks name (none for Markdown),
+     * and those its own fields name, such as a cover.
+     *
+     * @param array<string,string|int|null> $fields
      *
      * @return list<int>
      */
-    private function mediaIds(RecordType $type, string $body): array
+    private function mediaIds(RecordType $type, string $body, array $fields): array
     {
-        return $type->body === BodyFormat::Blocks ? Blocks::mediaIds($type->body->present($body)) : [];
+        $inBody = $type->body === BodyFormat::Blocks ? Blocks::mediaIds($type->body->present($body)) : [];
+
+        return array_values(array_unique([...$inBody, ...array_filter($type->fields->images($fields), static fn (?int $id): bool => $id !== null)]));
     }
 
     /** @param list<string> $slugs */

@@ -69,6 +69,8 @@ final class SiteContentController extends BaseController
     private function present(RecordType $type, Revision $revision, array $firstPublished, array $slugs): array
     {
         $content = $revision->content;
+        $images = $type->fields->images($content['fields']);
+        $media = $this->media->forSite(array_values(array_filter($images, static fn (?int $id): bool => $id !== null)));
 
         return [
             'id' => $revision->recordId,
@@ -79,6 +81,8 @@ final class SiteContentController extends BaseController
             'seo_title' => $content['seo_title'],
             'seo_description' => $content['seo_description'],
             ...$type->fields->present($content['fields']),
+            // Each image a field names, as an image block carries it (`cover`).
+            ...array_map(static fn (?int $id): ?array => $id === null ? null : $media[$id] ?? null, $images),
             'published_at' => self::utc($firstPublished[$revision->recordId]),
             'updated_at' => self::utc($revision->publishedAt),
             'previous_slugs' => array_values(array_diff($slugs[$revision->recordId], [$content['slug']])),
