@@ -197,6 +197,20 @@ its page in the frontend router (`ContentView` with its `fields`). The
 routes, the site API and change notices follow from the declaration. KAW
 Meetup's `events` is the worked example.
 
+## Development data
+
+`ContentSeeder` publishes a sample post and a sample page of blocks, and
+leaves a sample post as a draft, through the app's own publishing, so each has
+its revision and slug history:
+
+```
+docker compose exec php vendor/bin/phinx seed:run -s UserSeeder -s ContentSeeder
+```
+
+Every title starts "Sample:". It refuses to run outside development, and
+leaves alone any slug that exists. A project adds samples of its own record
+types to it.
+
 ## Failure list
 
 1. A record is published without a title, a summary or a body.

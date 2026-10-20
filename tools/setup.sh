@@ -346,7 +346,7 @@ cat <<EOF
   2. Start the stack and open it:
        docker compose up -d
        docker compose exec php vendor/bin/phinx migrate -e development
-       docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
+       docker compose exec php vendor/bin/phinx seed:run -s UserSeeder -s ContentSeeder
        ./tools/npm.sh ci && ./tools/npm.sh run build
      then http://localhost:8080 (README.md, "First run").
   3. Before your first deploy: sign up for the services in README.md, then

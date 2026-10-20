@@ -121,7 +121,8 @@ docker compose exec php vendor/bin/phinx migrate -e development
 
 # 3. Seed one local account per level. Prints the password (override with SEED_PASSWORD).
 #      owner@example.test   admin@example.test   user@example.test
-docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
+#    and sample content: a post and a page, published, and a draft post (docs/content.md).
+docker compose exec php vendor/bin/phinx seed:run -s UserSeeder -s ContentSeeder
 
 # 4. Build the frontend into src/public. npm runs in a container (docs/supply-chain.md):
 #    Node need not be installed, and no package can reach your home directory.
