@@ -179,6 +179,31 @@ final readonly class Publishing
         });
     }
 
+    /**
+     * Where each image is used, working copies included, so staff see what
+     * a change to it touches: by image id, each record by type name, then id.
+     *
+     * @return array<int,list<array{type:string,label:string,id:int,title:string,status:string}>>
+     */
+    public function imageUses(RecordTypes $types): array
+    {
+        $uses = [];
+
+        foreach ($types->all() as $type) {
+            foreach ($this->records->all($type) as $record) {
+                foreach ($this->mediaIds($type, $record->body, $record->fields) as $id) {
+                    $uses[$id][] = ['type' => $type->name, 'label' => $type->label, 'id' => $record->id, 'title' => $record->title, 'status' => $record->status->value];
+                }
+            }
+        }
+
+        foreach ($uses as &$list) {
+            usort($list, static fn (array $a, array $b): int => [$a['type'], $a['id']] <=> [$b['type'], $b['id']]);
+        }
+
+        return $uses;
+    }
+
     private function publishLocked(RecordType $type, Record $record, int $actor): Record
     {
         $images = $this->mediaIds($type, $record->body, $record->fields);

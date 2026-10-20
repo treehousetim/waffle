@@ -69,3 +69,14 @@ export function draftFrom(record, fields = []) {
 
   return draft
 }
+
+/**
+ * Where an image is used, as the Media page says it: 'page “Visit us”
+ * (Published), event “Agents night” (Draft)'. Empty when it is used nowhere.
+ *
+ * @param {Array<{ label: string, title: string, status: string }>} uses
+ * @returns {string}
+ */
+export function usesText(uses) {
+  return uses.map((use) => `${use.label} “${use.title}” (${statusLabel(use.status)})`).join(', ')
+}

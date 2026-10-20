@@ -35,7 +35,12 @@ final class MediaController extends BaseController
 
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        return $this->jsonSuccess($response, ['media' => array_map(static fn (Media $media): array => $media->toArray(), $this->media->all())]);
+        $uses = $this->publishing->imageUses($this->types);
+
+        return $this->jsonSuccess($response, ['media' => array_map(
+            static fn (Media $media): array => [...$media->toArray(), 'used_by' => $uses[$media->id] ?? []],
+            $this->media->all(),
+        )]);
     }
 
     /** The image is the request body (Content-Type image/jpeg, image/png or image/webp). */

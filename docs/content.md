@@ -107,7 +107,7 @@ so the editor offers the media library's images to choose from.
 
 | Route | Permission | Does |
 | --- | --- | --- |
-| `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs |
+| `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs and `used_by`: every record using it, drafts included (type, label, id, title, status) |
 | `POST /api/content/media` | `content-edit` | the image as the body (`Content-Type: image/jpeg`, `image/png`, `image/webp`) |
 | `PUT /api/content/media/{id}` | `content-edit` | `{alt, caption, credit_name, credit_url, licence}` |
 | `GET /api/content/media/{id}/file` | `content-edit` | any image's file |

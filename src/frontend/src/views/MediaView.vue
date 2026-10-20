@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 
 import client, { unwrap } from '@/api/client'
+import { usesText } from '@/utils/content'
 import { apiErrorMessage } from '@/utils/errors'
 import { fitWithin } from '@/utils/images'
 
@@ -88,6 +89,10 @@ onMounted(load)
       <div>
         <p><strong>Image {{ item.id }}</strong> <small>{{ item.width }} × {{ item.height }}<span v-if="item.public">, on the site</span></small></p>
         <p v-for="problem in item.problems" :key="problem" class="error">{{ problem }}</p>
+        <p v-if="item.used_by.length === 0"><small>Not used yet.</small></p>
+        <p v-else>
+          <small>Used by {{ usesText(item.used_by) }}.<template v-if="item.public"> Saving a change here rebuilds the published ones on the site.</template></small>
+        </p>
         <label>What it shows (alt text) <input v-model="drafts[item.id].alt" maxlength="300" /></label>
         <label>Caption <input v-model="drafts[item.id].caption" maxlength="300" /></label>
         <label>

@@ -186,3 +186,20 @@ it('tells the site when a public image\'s description changes, naming the publis
         ->and($notices())->toBe([['pages' => ['shows-it']]])
         ->and(array_column($this->json($this->get('/api/site/pages'))['data']['records'], null, 'slug')['shows-it']['body'][0]['media']['alt'])->toBe('Sample: better words');
 });
+
+it('lists where each image is used, working copies included, so staff know what changes with it', function (): void {
+    $this->asAdministrator();
+    $used = $this->json(($this->upload)(TestImages::jpeg(640, 480)))['data']['media']['id'];
+    $unused = $this->json(($this->upload)(TestImages::jpeg(320, 240)))['data']['media']['id'];
+    $this->put("/api/content/media/{$used}", ['alt' => 'Sample: used']);
+    $page = $this->json($this->post('/api/content/pages', ['title' => 'Uses it', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $used]]]))['data']['record']['id'];
+    $this->post("/api/content/pages/{$page}/publish");
+    $draft = $this->json($this->post('/api/content/pages', ['title' => 'Draft with it', 'summary' => 'S', 'body' => [['type' => 'image', 'media_id' => $used]]]))['data']['record']['id'];
+
+    $media = array_column($this->json($this->get('/api/content/media'))['data']['media'], null, 'id');
+
+    expect($media[$used]['used_by'])->toBe([
+        ['type' => 'pages', 'label' => 'page', 'id' => $page, 'title' => 'Uses it', 'status' => 'published'],
+        ['type' => 'pages', 'label' => 'page', 'id' => $draft, 'title' => 'Draft with it', 'status' => 'draft'],
+    ])->and($media[$unused]['used_by'])->toBe([]);
+});

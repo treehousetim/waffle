@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { draftFrom, emptyDraft, listTime, statusLabel } from '../src/utils/content.js'
+import { draftFrom, emptyDraft, listTime, statusLabel, usesText } from '../src/utils/content.js'
 
 test('labels the publish statuses, and passes others through', () => {
   assert.equal(statusLabel('draft'), 'Draft')
@@ -46,4 +46,15 @@ test('shows a date and time in a list as it was given, or nothing', () => {
   assert.equal(listTime('2026-11-12T18:30:00-06:00'), '2026-11-12 18:30')
   assert.equal(listTime(null), '')
   assert.equal(listTime('soon'), '')
+})
+
+test('says where an image is used, each record with its status', () => {
+  assert.equal(
+    usesText([
+      { label: 'event', title: 'Agents night', status: 'draft' },
+      { label: 'page', title: 'Visit us', status: 'published' }
+    ]),
+    'event “Agents night” (Draft), page “Visit us” (Published)'
+  )
+  assert.equal(usesText([]), '')
 })
