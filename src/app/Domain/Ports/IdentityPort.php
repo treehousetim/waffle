@@ -58,4 +58,13 @@ interface IdentityPort
      * @throws \InvalidArgumentException when there is no such account
      */
     public function setRole(int $userId, ?Role $role): void;
+
+    /**
+     * Makes an account with no level, verified, and returns its id
+     * (docs/invitations.md). Signs nobody in.
+     *
+     * @throws \App\Domain\Auth\AccountExists when the address already has one
+     * @throws \InvalidArgumentException when the address or password is not usable
+     */
+    public function createAccount(string $email, string $password, string $name): int;
 }

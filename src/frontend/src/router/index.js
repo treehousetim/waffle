@@ -17,6 +17,13 @@ export const routes = [
     meta: { public: true, title: 'Sign in' }
   },
   {
+    // An invitation link (docs/invitations.md): open to anybody holding it.
+    path: '/invite/:token',
+    name: 'invite',
+    component: () => import('@/views/AcceptInviteView.vue'),
+    meta: { public: true, title: 'Join' }
+  },
+  {
     path: '/',
     name: 'home',
     component: () => import('@/views/HelloView.vue'),
@@ -34,6 +41,12 @@ export const routes = [
     component: () => import('@/views/ContentView.vue'),
     props: { type: 'posts', label: 'Posts' },
     meta: { title: 'Posts', permission: 'content-edit', nav: true }
+  },
+  {
+    path: '/invitations',
+    name: 'invitations',
+    component: () => import('@/views/InvitationsView.vue'),
+    meta: { title: 'Invitations', permission: 'invitations-manage', nav: true }
   },
   {
     path: '/queue',

@@ -94,4 +94,22 @@ final class FakeIdentity implements IdentityPort
     {
         $this->rolesSet[$userId] = $role;
     }
+
+    /** @var array<string,array{password:string,name:string}> accounts createAccount() made, by address */
+    public array $accountsCreated = [];
+
+    /** @var list<string> addresses createAccount() finds already taken */
+    public array $existingAccounts = [];
+
+    public function createAccount(string $email, string $password, string $name): int
+    {
+        if (in_array($email, $this->existingAccounts, true)) {
+            throw new \App\Domain\Auth\AccountExists('An account with that email address already exists.');
+        }
+
+        $this->accountsCreated[$email] = ['password' => $password, 'name' => $name];
+
+        // A real row with no level, so whatever refers to the account can.
+        return \Tests\Support\Factory::createUser(null, $email);
+    }
 }

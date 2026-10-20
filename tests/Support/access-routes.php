@@ -21,6 +21,9 @@ const UNGUARDED = [
     // The site API: public, read-only, published content only (docs/content.md).
     'GET /api/site/posts',
     'GET /api/site/posts/retired',
+    // An invitation link: the token is the permission (docs/invitations.md).
+    'GET /api/invite/{token}',
+    'POST /api/invite/{token}/accept',
 ];
 
 /** @return array<string,Permission> "METHOD pattern" => permission */
@@ -33,6 +36,9 @@ function guardedRoutes(): array
         'GET /api/queue' => Permission::QueueManage,
         'POST /api/queue/jobs/{id}/retry' => Permission::QueueManage,
         'DELETE /api/queue/jobs/{id}' => Permission::QueueManage,
+        'GET /api/invitations' => Permission::InvitationsManage,
+        'POST /api/invitations' => Permission::InvitationsManage,
+        'POST /api/invitations/{id}/revoke' => Permission::InvitationsManage,
         'GET /api/content/{type}' => Permission::ContentEdit,
         'POST /api/content/{type}' => Permission::ContentEdit,
         'GET /api/content/{type}/{id}' => Permission::ContentEdit,

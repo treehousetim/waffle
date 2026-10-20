@@ -47,11 +47,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** Asks the server again who is signed in: after a sign-in made elsewhere, such as accepting an invitation. */
+  async function refresh() {
+    checked.value = false
+    await check()
+  }
+
   /** The session is gone: forget it here too, without asking the server. */
   function forget() {
     user.value = null
     checked.value = true
   }
 
-  return { user, checked, isAuthenticated, permissions, check, login, logout, forget }
+  return { user, checked, isAuthenticated, permissions, check, refresh, login, logout, forget }
 })

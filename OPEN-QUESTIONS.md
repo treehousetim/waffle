@@ -3,7 +3,7 @@
 Sparse list. One line each where possible. When answered, move it to `RESOLVED_QUESTIONS.md` with a line saying where it was settled.
 
 ## Decisions the template made that you may want to change
-- **Auth:** email + password, and today only the first owner (`FIRST_USERNAME`/`FIRST_USER_PASSWORD`). How others join is decided and not yet built (RESOLVED_QUESTIONS.md): invitations, open registration only through OAuth, emailed reset links, SMTP from the queue.
+- **Auth:** email + password, and today only the first owner (`FIRST_USERNAME`/`FIRST_USER_PASSWORD`). How others join is decided (RESOLVED_QUESTIONS.md): invitations are built (docs/invitations.md, the link copied and sent by hand until there is a mailer); open registration through OAuth, emailed reset links and SMTP from the queue are not built yet.
 - **Three levels** — owner, administrator, user — and the grid in `docs/access-levels.md`. Rename or add levels before anything is built on them.
 - **Display timezone:** the `display_timezone` setting defaults to `UTC`. Set it to where the team is.
 - **Seeded dev credentials:** `owner@`, `admin@`, `user@example.test`, password `local-dev-password` unless `SEED_PASSWORD` is set.

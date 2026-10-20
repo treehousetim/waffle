@@ -152,3 +152,22 @@ it('gives an account exactly one level, or none, and refuses an account that doe
         ->and(fn () => $this->identity->setRole(999_999, Role::User))
         ->toThrow(InvalidArgumentException::class, 'There is no account 999999.');
 });
+
+it('makes a verified account with no level, and refuses a taken or unusable address', function (): void {
+    Factory::createUser(Role::User, 'taken@example.test');
+
+    $id = $this->identity->createAccount('made@example.test', 'correct horse battery', 'Made Person');
+    $user = TestCase::container()->get(App\Models\UserRepository::class)->findById($id);
+
+    expect($user->email)->toBe('made@example.test')
+        ->and($user->username)->toBe('Made Person')
+        ->and($user->role)->toBeNull()
+        ->and(fn () => $this->identity->createAccount('taken@example.test', 'correct horse battery', 'X'))
+        ->toThrow(App\Domain\Auth\AccountExists::class)
+        ->and(fn () => $this->identity->createAccount('not an address', 'correct horse battery', 'X'))
+        ->toThrow(InvalidArgumentException::class, 'That email address or password cannot be used.');
+
+    $this->identity->login('made@example.test', 'correct horse battery');
+
+    expect($this->identity->id())->toBe($id);
+});

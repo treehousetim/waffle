@@ -24,4 +24,5 @@ enum Permission: string
     case QueueManage = 'queue-manage';
     case ContentEdit = 'content-edit';
     case ContentPublish = 'content-publish';
+    case InvitationsManage = 'invitations-manage';
 }

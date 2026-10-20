@@ -22,7 +22,7 @@ it('signs in a user with valid credentials and says who they are', function (): 
             'username' => 'Test User',
             'role' => 'owner',
             'role_label' => 'Owner',
-            'permissions' => ['home', 'settings-view', 'settings-edit', 'queue-manage', 'content-edit', 'content-publish'],
+            'permissions' => ['home', 'settings-view', 'settings-edit', 'queue-manage', 'content-edit', 'content-publish', 'invitations-manage'],
         ]);
 });
 
@@ -35,7 +35,7 @@ it('reports each level and only the permissions it holds', function (Role $role,
     expect($body['data']['role'])->toBe($role->value)
         ->and($body['data']['permissions'])->toBe($permissions);
 })->with([
-    'administrator' => [Role::Administrator, ['home', 'settings-view', 'queue-manage', 'content-edit', 'content-publish']],
+    'administrator' => [Role::Administrator, ['home', 'settings-view', 'queue-manage', 'content-edit', 'content-publish', 'invitations-manage']],
     'user' => [Role::User, ['home']],
 ]);
 

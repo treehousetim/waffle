@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Libraries\Auth;
 
 use App\Domain\Auth\AccountDisabled;
+use App\Domain\Auth\AccountExists;
 use App\Domain\Auth\AccountNotVerified;
 use App\Domain\Auth\InvalidCredentials;
 use App\Domain\Auth\Role;
@@ -17,6 +18,7 @@ use Delight\Auth\InvalidEmailException;
 use Delight\Auth\InvalidPasswordException;
 use Delight\Auth\TooManyRequestsException;
 use Delight\Auth\UnknownIdException;
+use Delight\Auth\UserAlreadyExistsException;
 use InvalidArgumentException;
 
 /**
@@ -128,6 +130,17 @@ final readonly class DelightIdentity implements IdentityPort
             }
         } catch (UnknownIdException) {
             throw new InvalidArgumentException("There is no account {$userId}.");
+        }
+    }
+
+    public function createAccount(string $email, string $password, string $name): int
+    {
+        try {
+            return $this->auth->admin()->createUser($email, $password, $name);
+        } catch (UserAlreadyExistsException $e) {
+            throw new AccountExists('An account with that email address already exists.', 0, $e);
+        } catch (InvalidEmailException | InvalidPasswordException $e) {
+            throw new InvalidArgumentException('That email address or password cannot be used.', 0, $e);
         }
     }
 }

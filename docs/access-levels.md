@@ -25,6 +25,7 @@ the two lower levels are listed there.
 | `queue-manage` | See the queue and its failed jobs, and retry or discard them (`/api/queue`, docs/queue.md) | ✓ | ✓ | |
 | `content-edit` | Write and edit records the site publishes (docs/content.md) | ✓ | ✓ | |
 | `content-publish` | Publish, retire and restore records | ✓ | ✓ | |
+| `invitations-manage` | Invite people, and revoke invitations (administrators: users only; docs/invitations.md) | ✓ | ✓ | |
 
 Keep this table and `tests/Unit/Domain/Auth/PermissionsTest.php` saying the
 same thing; change both together.
