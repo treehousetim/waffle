@@ -9,7 +9,8 @@ namespace App\Domain\Content;
  * list of typed blocks from one fixed set, each rendered on the site by its
  * own component. Anything outside the set, or a field a block does not take,
  * is refused (22.), so a block never carries HTML, a script or a style.
- * Images and galleries come with the media library.
+ * Images and galleries name media by id; whether those exist and are
+ * described is the media library's to say (docs/content.md, "Media").
  */
 final class Blocks
 {
@@ -24,7 +25,31 @@ final class Blocks
         'faq' => ['type', 'items'],
         'cta' => ['type', 'label', 'path', 'note'],
         'table' => ['type', 'columns', 'rows'],
+        'image' => ['type', 'media_id', 'caption'],
+        'gallery' => ['type', 'media_ids', 'caption'],
     ];
+
+    /**
+     * Every media id the blocks name, in order, once each.
+     *
+     * @param list<array<string,mixed>> $blocks checked
+     *
+     * @return list<int>
+     */
+    public static function mediaIds(array $blocks): array
+    {
+        $ids = [];
+
+        foreach ($blocks as $block) {
+            $ids = [...$ids, ...match ($block['type']) {
+                'image' => [$block['media_id']],
+                'gallery' => $block['media_ids'],
+                default => [],
+            }];
+        }
+
+        return array_values(array_unique($ids));
+    }
 
     /**
      * @return list<array<string,mixed>> the blocks, checked and normalised
@@ -75,6 +100,8 @@ final class Blocks
                 'faq' => ['items' => self::faq($block['items'] ?? null, $where)],
                 'cta' => self::cta($block),
                 'table' => self::table($block, $where),
+                'image' => ['media_id' => self::mediaId($block['media_id'] ?? null), 'caption' => ContentText::optionalLine($block['caption'] ?? null, 'caption', 300)],
+                'gallery' => ['media_ids' => self::gallery($block['media_ids'] ?? null), 'caption' => ContentText::optionalLine($block['caption'] ?? null, 'caption', 300)],
             }];
         } catch (InvalidContent $e) {
             throw self::at($where, $e);
@@ -183,6 +210,25 @@ final class Blocks
         }
 
         return ['columns' => array_map(static fn (mixed $column): string => self::line($column, 'column', 100), $columns), 'rows' => $checkedRows];
+    }
+
+    private static function mediaId(mixed $id): int
+    {
+        if (!is_int($id) || $id < 1) {
+            throw InvalidContent::because('It needs an image from the media library.');
+        }
+
+        return $id;
+    }
+
+    /** @return list<int> */
+    private static function gallery(mixed $ids): array
+    {
+        if (!is_array($ids) || !array_is_list($ids) || count($ids) < 2 || count($ids) > 24) {
+            throw InvalidContent::because('A gallery needs 2 to 24 images.');
+        }
+
+        return array_map(self::mediaId(...), $ids);
     }
 
     private static function cell(mixed $cell): string

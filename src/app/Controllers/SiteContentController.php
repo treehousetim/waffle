@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Domain\Content\Blocks;
+use App\Domain\Content\BodyFormat;
 use App\Domain\Content\PublishStatus;
 use App\Domain\Content\RecordType;
 use App\Domain\Content\RecordTypes;
+use App\Libraries\Content\MediaLibrary;
 use App\Libraries\Http\JsonResponder;
 use App\Models\Content\RecordRepository;
 use App\Models\Content\Revision;
@@ -24,6 +27,7 @@ final class SiteContentController extends BaseController
         JsonResponder $json,
         private readonly RecordTypes $types,
         private readonly RecordRepository $records,
+        private readonly MediaLibrary $media,
     ) {
         parent::__construct($json);
     }
@@ -71,7 +75,7 @@ final class SiteContentController extends BaseController
             'slug' => $content['slug'],
             'title' => $content['title'],
             'summary' => $content['summary'],
-            'body' => $type->body->present($content['body']),
+            'body' => $this->siteBody($type, $content['body']),
             'seo_title' => $content['seo_title'],
             'seo_description' => $content['seo_description'],
             ...$type->fields->present($content['fields']),
@@ -85,5 +89,28 @@ final class SiteContentController extends BaseController
     private static function utc(string $stored): string
     {
         return str_replace(' ', 'T', $stored) . 'Z';
+    }
+
+    /**
+     * The body as the site gets it: a block that names images carries each
+     * image's path, size and description (docs/content.md, "Media").
+     *
+     * @return string|list<array<string,mixed>>
+     */
+    private function siteBody(RecordType $type, string $stored): string|array
+    {
+        $body = $type->body->present($stored);
+
+        if ($type->body !== BodyFormat::Blocks) {
+            return $body;
+        }
+
+        $media = $this->media->forSite(Blocks::mediaIds($body));
+
+        return array_map(static fn (array $block): array => match ($block['type']) {
+            'image' => [...$block, 'media' => $media[$block['media_id']] ?? null],
+            'gallery' => [...$block, 'media' => array_values(array_filter(array_map(static fn (int $id): ?array => $media[$id] ?? null, $block['media_ids'])))],
+            default => $block,
+        }, $body);
     }
 }

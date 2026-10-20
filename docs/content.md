@@ -7,9 +7,10 @@ ignore it: nothing is published unless someone publishes it.
 
 **Built so far:** publishing (the state machine, revisions, slugs), `posts`
 (Markdown) and `pages` (blocks), the site API that reads them, and change
-notices; and the sites that send forms, with their submissions
-(docs/forms.md). **Still to come:** media (and with it image and gallery
-blocks); terms.
+notices; the sites that send forms, with their submissions
+(docs/forms.md); and the media library, with image and gallery blocks.
+**Still to come:** terms; an object-storage adapter for production
+(OPEN-QUESTIONS.md).
 docs/content-model.md is the design for all of it.
 
 ## How it works
@@ -70,8 +71,35 @@ component.
 | `table` | `columns` (1 to 10), `rows` (at most 100, each as wide as the columns; plain text cells) |
 
 Markdown in a block follows the body rules (no HTML, safe links). A body has
-at most 200 blocks, and a page with none cannot be published. Images and
-galleries come with the media library.
+at most 200 blocks, and a page with none cannot be published. Two more types
+name images from the media library: `image` (`media_id`, `caption`) and
+`gallery` (`media_ids`, 2 to 24, `caption`).
+
+## Media
+
+Images are uploaded once to the **Media** page (a JPEG, PNG or WebP of at
+most 2 MB and 40 megapixels; the page shrinks a picture to 2400 px first),
+re-encoded by the app to a JPEG at most 2400 px on its longer side, which
+keeps nothing of the file but its pixels, and kept behind `StoragePort`. The
+same picture uploaded twice is one image. Each image carries its alt text
+(what it shows), an optional caption, and whose it is: `own`, `permission`
+or `licensed`, the last two with a credit (`licence` types).
+
+A block naming an image that is not in the library is refused when the
+record is saved; a record whose images lack alt text, or a credit they need,
+cannot be published. When a record using an image is first published, the
+image becomes public: the site API carries, for each image block, its path
+(`/api/site/media/<id>.jpg`), size, alt text, caption and credit, and that
+path serves the file to anyone. It stays public, so an older release of the
+site never loses a picture.
+
+| Route | Permission | Does |
+| --- | --- | --- |
+| `GET /api/content/media` | `content-edit` | every image, newest first, with what each still needs |
+| `POST /api/content/media` | `content-edit` | the image as the body (`Content-Type: image/jpeg`, `image/png`, `image/webp`) |
+| `PUT /api/content/media/{id}` | `content-edit` | `{alt, caption, credit_name, credit_url, licence}` |
+| `GET /api/content/media/{id}/file` | `content-edit` | any image's file |
+| `GET /api/site/media/{id}.jpg` | none | a public image's file |
 
 ## Permissions
 
@@ -180,3 +208,7 @@ Meetup's `events` is the worked example.
 20. Several changes close together send several notices, and the site runs overlapping builds.
 21. Without a site configured, production loses notices silently.
 22. A block body holds a block of a type outside the set, a field its type does not take, HTML, or a heading inside text.
+23. An uploaded file that is not a JPEG, PNG or WebP, is larger than 2 MB, claims one type and is another, or is too many pixels to decode, is kept; or an image keeps its metadata, including where it was taken.
+24. A record is published using an image with no alt text, or without the credit its licence needs.
+25. The same picture uploaded twice becomes two images.
+26. An image no published record has used is served to anyone.

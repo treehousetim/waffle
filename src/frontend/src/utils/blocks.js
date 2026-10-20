@@ -11,7 +11,9 @@ export const BLOCK_TYPES = [
   { type: 'callout', label: 'Callout' },
   { type: 'faq', label: 'Questions and answers' },
   { type: 'cta', label: 'Call to action' },
-  { type: 'table', label: 'Table' }
+  { type: 'table', label: 'Table' },
+  { type: 'image', label: 'Image' },
+  { type: 'gallery', label: 'Gallery' }
 ]
 
 /**
@@ -34,6 +36,10 @@ export function newBlock(type) {
       return { type, label: '', path: '/', note: '' }
     case 'table':
       return { type, columns: [''], rows: [] }
+    case 'image':
+      return { type, media_id: null, caption: '' }
+    case 'gallery':
+      return { type, media_ids: [], caption: '' }
     default:
       return { type: 'text', markdown: '' }
   }

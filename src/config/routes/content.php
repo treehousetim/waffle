@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 
 use App\Controllers\ContentController;
+use App\Controllers\MediaController;
 use App\Controllers\SiteContentController;
 use App\Domain\Auth\Permission;
 use App\Domain\Content\RecordTypes;
@@ -19,6 +20,16 @@ use Slim\Routing\RouteCollectorProxy;
 
 return static function (App $app, ContainerInterface $container): void {
     $can = static fn (Permission $permission): Deferred => new Deferred($container, 'can:' . $permission->value);
+
+    // The media library (docs/content.md, "Media"): before /api/content/{type},
+    // so "media" is never read as a record type.
+    $app->group('/api/content/media', function (RouteCollectorProxy $media) use ($can): void {
+        $media->get('', [MediaController::class, 'index'])->add($can(Permission::ContentEdit));
+        $media->post('', [MediaController::class, 'upload'])->add($can(Permission::ContentEdit));
+        $media->put('/{id}', [MediaController::class, 'describe'])->add($can(Permission::ContentEdit));
+        $media->get('/{id}/file', [MediaController::class, 'file'])->add($can(Permission::ContentEdit));
+    })->add(AuthMiddleware::class);
+    $app->get('/api/site/media/{id:[0-9]+}.jpg', [MediaController::class, 'siteFile']);
 
     $app->group('/api/content/{type}', function (RouteCollectorProxy $content) use ($can): void {
         $content->get('', [ContentController::class, 'index'])->add($can(Permission::ContentEdit));

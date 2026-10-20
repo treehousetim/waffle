@@ -19,8 +19,14 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         git \
         unzip \
-        libzip-dev; \
-    docker-php-ext-install -j"$(nproc)" pdo_mysql zip pcntl; \
+        libzip-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libwebp-dev; \
+    # GD re-encodes uploaded images, which strips their metadata (docs/content.md, "Media").
+    docker-php-ext-configure gd --with-jpeg --with-webp; \
+    docker-php-ext-install -j"$(nproc)" pdo_mysql zip pcntl gd; \
+    php -m | grep -qi '^gd$'; \
     php -m | grep -qi '^pcntl$'; \
     php -m | grep -qi '^mbstring$'; \
     rm -rf /var/lib/apt/lists/*

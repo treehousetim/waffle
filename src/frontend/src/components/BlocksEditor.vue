@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
+import client, { unwrap } from '@/api/client'
 import { BLOCK_TYPES, moveBlock, newBlock, tableToText, textToTable } from '@/utils/blocks'
 
 /*
@@ -11,6 +12,17 @@ import { BLOCK_TYPES, moveBlock, newBlock, tableToText, textToTable } from '@/ut
 
 const blocks = defineModel({ type: Array, required: true })
 const adding = ref('text')
+/** The media library, for image and gallery blocks to choose from. */
+const library = ref([])
+const imageLabel = (item) => `${item.id}: ${item.alt || '(no description yet)'}`
+
+onMounted(async () => {
+  try {
+    library.value = unwrap(await client.get('/content/media')).media
+  } catch {
+    library.value = []
+  }
+})
 
 const label = (type) => BLOCK_TYPES.find((option) => option.type === type)?.label ?? type
 const add = () => (blocks.value = [...blocks.value, newBlock(adding.value)])
@@ -60,6 +72,23 @@ function setTable(block, text) {
         <label>Button text <input v-model="block.label" maxlength="60" /></label>
         <label>Page on this site <input v-model="block.path" placeholder="/events/" /></label>
         <label>Note <input v-model="block.note" maxlength="200" /></label>
+      </template>
+      <template v-else-if="block.type === 'image'">
+        <label>
+          Image (from Media)
+          <select v-model.number="block.media_id">
+            <option :value="null" disabled>Choose an image</option>
+            <option v-for="item in library" :key="item.id" :value="item.id">{{ imageLabel(item) }}</option>
+          </select>
+        </label>
+        <label>Caption <input v-model="block.caption" maxlength="300" /></label>
+      </template>
+      <template v-else-if="block.type === 'gallery'">
+        <fieldset>
+          <legend>Images (2 to 24, from Media)</legend>
+          <label v-for="item in library" :key="item.id"><input v-model="block.media_ids" type="checkbox" :value="item.id" /> {{ imageLabel(item) }}</label>
+        </fieldset>
+        <label>Caption <input v-model="block.caption" maxlength="300" /></label>
       </template>
       <label v-else-if="block.type === 'table'">
         Columns on the first line, a row on each line after, cells separated by |

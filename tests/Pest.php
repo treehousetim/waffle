@@ -140,6 +140,8 @@ uses()->group('content')->in(
     'Feature/ContentTest.php',
     'Feature/SiteContentTest.php',
     'Feature/PagesTest.php',
+    'Feature/MediaTest.php',
+    'Unit/Libraries/GdImagesTest.php',
     'Feature/E2E/PublishingJourneyTest.php',
     'Schema/ContentTransactionTest.php',
 );

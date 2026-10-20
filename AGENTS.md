@@ -56,6 +56,7 @@ Use exactly these majors, latest patch at install time.
 | DI | PHP-DI | `php-di/php-di` ^7.1, `php-di/slim-bridge` ^3.4 |
 | Auth | Delight\Auth | `delight-im/auth` ^9.0 — session-based, roles via its bitmask |
 | Migrations | Phinx | `robmorgan/phinx` ^0.16 |
+| Images (PHP) | GD, the bundled extension (JPEG, PNG, WebP) | re-encodes uploads behind `ImagePort` (docs/content.md, "Media") |
 | HTTP client (PHP) | Guzzle | `guzzlehttp/guzzle` ^8.1 — only in `Libraries/Clients/` (change notices to the site) |
 | Env loading | `vlucas/phpdotenv` | ^5.7 (tests only read `.env.testing` with it; nothing else loads a file) |
 | Tests | Pest | `pestphp/pest` ^4 (brings PHPUnit 12) + `pestphp/pest-plugin-arch` ^4, dev only; `pcov` for coverage. Pest 5 / PHPUnit 13 exists; stay on 4 unless told otherwise. |

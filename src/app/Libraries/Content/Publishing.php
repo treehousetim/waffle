@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Libraries\Content;
 
+use App\Domain\Content\Blocks;
+use App\Domain\Content\BodyFormat;
 use App\Domain\Content\ChangeNotice;
 use App\Domain\Content\Draft;
 use App\Domain\Content\InvalidContent;
@@ -34,6 +36,8 @@ final readonly class Publishing
         private RecordRepository $records,
         private ClockPort $clock,
         private QueuePort $queue,
+        /** For record types whose blocks use images (docs/content.md, "Media"). */
+        private ?MediaLibrary $media = null,
     ) {
     }
 
@@ -48,6 +52,7 @@ final readonly class Publishing
     public function create(RecordType $type, array $input): Record
     {
         $draft = Draft::parse($type, $input, false);
+        $this->media?->assertExist($this->mediaIds($type, $draft->body));
 
         return $this->records->transactional(function () use ($type, $draft): Record {
             $slug = $draft->slug ?? $this->freeSlug($type, Slug::suggest($draft->title));
@@ -73,6 +78,7 @@ final readonly class Publishing
     public function update(RecordType $type, int $id, array $input): Record
     {
         $draft = Draft::parse($type, $input, true);
+        $this->media?->assertExist($this->mediaIds($type, $draft->body));
 
         return $this->records->transactional(function () use ($type, $id, $draft): Record {
             $record = $this->lock($type, $id);
@@ -146,7 +152,8 @@ final readonly class Publishing
 
     private function publishLocked(RecordType $type, Record $record, int $actor): Record
     {
-        $problems = PublishBar::problems($type, $record->title, $record->summary, $record->body, $record->fields);
+        $images = $this->mediaIds($type, $record->body);
+        $problems = [...PublishBar::problems($type, $record->title, $record->summary, $record->body, $record->fields), ...($this->media?->problems($images) ?? [])];
 
         if ($problems !== []) {
             throw InvalidContent::because('This cannot be published yet. ' . implode(' ', $problems));
@@ -165,8 +172,20 @@ final readonly class Publishing
         }
 
         $this->records->addRevision($type, $record->id, $record->content(), $actor, $now);
+        // An image a published record uses is public from now on (docs/content.md, "Media").
+        $this->media?->publish($images);
 
         return $this->mustFind($type, $record->id);
+    }
+
+    /**
+     * The images a body of blocks names; none for Markdown.
+     *
+     * @return list<int>
+     */
+    private function mediaIds(RecordType $type, string $body): array
+    {
+        return $type->body === BodyFormat::Blocks ? Blocks::mediaIds($type->body->present($body)) : [];
     }
 
     /** @param list<string> $slugs */

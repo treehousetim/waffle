@@ -50,6 +50,12 @@ export const routes = [
     meta: { title: 'Pages', permission: 'content-edit', nav: true }
   },
   {
+    path: '/media',
+    name: 'media',
+    component: () => import('@/views/MediaView.vue'),
+    meta: { title: 'Media', permission: 'content-edit', nav: true }
+  },
+  {
     path: '/inbox',
     name: 'inbox',
     component: () => import('@/views/InboxView.vue'),

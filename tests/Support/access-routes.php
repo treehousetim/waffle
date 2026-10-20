@@ -23,6 +23,8 @@ const UNGUARDED = [
     'GET /api/site/posts/retired',
     'GET /api/site/pages',
     'GET /api/site/pages/retired',
+    // A published image, for the site's build (docs/content.md, "Media").
+    'GET /api/site/media/{id:[0-9]+}.jpg',
     // An invitation link: the token is the permission (docs/invitations.md).
     'GET /api/invite/{token}',
     'POST /api/invite/{token}/accept',
@@ -51,6 +53,10 @@ function guardedRoutes(): array
         'GET /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations/{id}/revoke' => Permission::InvitationsManage,
+        'GET /api/content/media' => Permission::ContentEdit,
+        'POST /api/content/media' => Permission::ContentEdit,
+        'PUT /api/content/media/{id}' => Permission::ContentEdit,
+        'GET /api/content/media/{id}/file' => Permission::ContentEdit,
         'GET /api/content/{type}' => Permission::ContentEdit,
         'POST /api/content/{type}' => Permission::ContentEdit,
         'GET /api/content/{type}/{id}' => Permission::ContentEdit,

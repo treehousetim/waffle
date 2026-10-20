@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Content\Licence;
 use App\Domain\Content\PublishStatus;
 use App\Domain\Forms\SiteStatus;
 use App\Domain\Forms\SubmissionStatus;
@@ -35,6 +36,7 @@ it('has exactly one types row per enum case', function (string $enum, string $gr
     'job statuses' => [JobStatus::class, 'job_status'],
     'job run outcomes' => [RunOutcome::class, 'job_run_outcome'],
     'publish statuses' => [PublishStatus::class, 'publish_status'],
+    'licences' => [Licence::class, 'licence'],
     'invitation statuses' => [InvitationStatus::class, 'invitation_status'],
     'site statuses' => [SiteStatus::class, 'site_status'],
     'submission statuses' => [SubmissionStatus::class, 'submission_status'],

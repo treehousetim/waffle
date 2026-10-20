@@ -10,6 +10,8 @@ test('offers a new empty block of every type, and text for anything else', () =>
 
   assert.deepEqual(newBlock('heading'), { type: 'heading', level: 2, text: '' })
   assert.deepEqual(newBlock('faq').items, [{ question: '', answer: '' }])
+  assert.deepEqual(newBlock('image'), { type: 'image', media_id: null, caption: '' })
+  assert.deepEqual(newBlock('gallery'), { type: 'gallery', media_ids: [], caption: '' })
   assert.deepEqual(newBlock('nonsense'), { type: 'text', markdown: '' })
 })
 
