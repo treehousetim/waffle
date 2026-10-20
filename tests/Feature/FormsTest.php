@@ -23,7 +23,7 @@ function fromSite(object $test, array $fields, ?string $key, string $as = 'json'
 {
     $request = (new Slim\Psr7\Factory\ServerRequestFactory())
         ->createServerRequest('POST', "http://localhost/api/site/forms/{$form}", ['REMOTE_ADDR' => '10.0.0.5'])
-        ->withHeader('X-Forwarded-For', '203.0.113.50');
+        ->withHeader('X-Visitor-Address', '203.0.113.50');
 
     if ($key !== null) {
         $request = $request->withHeader('X-Site-Key', $key);
@@ -74,6 +74,21 @@ it('takes a form-encoded post from a browser without script, and sends it to a p
         ->and($sent->getHeaderLine('Location'))->toBe('/contact/thanks/')
         ->and($refused->getHeaderLine('Location'))->toBe('/contact/')
         ->and($away->getHeaderLine('Location'))->toBe('/');
+});
+
+it('counts each visitor by the address the site sends, not the site server\'s (4)', function (): void {
+    foreach (range(1, 5) as $n) {
+        fromSite($this, contactFields(), $this->key);
+    }
+
+    $other = (new Slim\Psr7\Factory\ServerRequestFactory())
+        ->createServerRequest('POST', 'http://localhost/api/site/forms/contact', ['REMOTE_ADDR' => '10.0.0.5'])
+        ->withHeader('X-Site-Key', $this->key)
+        ->withHeader('X-Visitor-Address', '198.51.100.1')
+        ->withHeader('Content-Type', 'application/json')
+        ->withBody((new StreamFactory())->createStream(json_encode(contactFields(), JSON_THROW_ON_ERROR)));
+
+    expect(TestCase::app()->handle($other)->getStatusCode())->toBe(200);
 });
 
 it('answers an unknown form 404, and too many tries 429 (4, 7)', function (): void {

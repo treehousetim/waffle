@@ -17,6 +17,7 @@ use App\Domain\Forms\FormDefinition;
 use App\Domain\Forms\FormDefinitions;
 use App\Domain\Ports\ClockPort;
 use App\Domain\Ports\IdentityPort;
+use App\Domain\Ports\StoragePort;
 use App\Libraries\Forms\Reception;
 use App\Libraries\Forms\Sites;
 use App\Libraries\Http\JsonResponder;
@@ -50,6 +51,7 @@ return [
         $c->get(FormDefinitions::class),
         $c->get(SubmissionRepository::class),
         $c->get(ClockPort::class),
+        $c->get(StoragePort::class),
     )),
     Sites::class => factory(static fn (ContainerInterface $c): Sites => new Sites($c->get(SiteRepository::class), $c->get(ClockPort::class))),
 

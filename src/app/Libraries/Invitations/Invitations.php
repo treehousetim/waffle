@@ -71,11 +71,21 @@ final readonly class Invitations
         });
     }
 
-    /** @throws InvitationNotFound|IllegalTransition */
-    public function revoke(int $id): Invitation
+    /**
+     * Revokes a pending invitation, at a level the revoker could have invited
+     * at: an administrator revokes users' invitations only (4.).
+     *
+     * @throws InvitationNotFound|IllegalTransition|InvalidInvitation
+     */
+    public function revoke(int $id, ?Role $revokerRole): Invitation
     {
-        return $this->invitations->transactional(function () use ($id): Invitation {
+        return $this->invitations->transactional(function () use ($id, $revokerRole): Invitation {
             $invitation = $this->invitations->find($id, true) ?? throw InvitationNotFound::id();
+
+            if (!InvitationRules::mayInvite($revokerRole, $invitation->role)) {
+                throw InvalidInvitation::because('You cannot revoke an invitation at that level.');
+            }
+
             $this->invitations->decide($invitation, InvitationStatus::Revoked, $this->clock->now());
 
             return $this->mustFind($id);

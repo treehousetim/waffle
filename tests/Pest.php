@@ -122,6 +122,7 @@ uses()->group('forms')->in(
     'Unit/Libraries/Forms',
     'Feature/FormsTest.php',
     'Feature/E2E/JoiningJourneyTest.php',
+    'Schema/FormsTransactionTest.php',
 );
 
 // The invitations slice (docs/invitations.md).

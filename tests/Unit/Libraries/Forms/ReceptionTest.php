@@ -14,6 +14,7 @@ use App\Libraries\Forms\Sites;
 use App\Libraries\Forms\TooManySubmissions;
 use App\Models\Forms\SiteRepository;
 use App\Models\Forms\SubmissionRepository;
+use Tests\Support\Fakes\FakeStorage;
 use Tests\Support\Fakes\FrozenClock;
 use Tests\TestCase;
 
@@ -23,7 +24,8 @@ beforeEach(function (): void {
     $this->clock = new FrozenClock();
     $this->submissions = TestCase::container()->get(SubmissionRepository::class);
     $this->sites = new Sites(TestCase::container()->get(SiteRepository::class), $this->clock);
-    $this->reception = new Reception(new FormDefinitions(new FormDefinition('contact', 'Contact', 'Thanks!', new ContactForm())), $this->submissions, $this->clock);
+    $this->storage = new FakeStorage();
+    $this->reception = new Reception(new FormDefinitions(new FormDefinition('contact', 'Contact', 'Thanks!', new ContactForm())), $this->submissions, $this->clock, $this->storage);
     [$this->site] = $this->sites->issueKey($this->sites->create('reception-site', 'Reception', 'https://reception.example')->id);
 });
 
@@ -68,13 +70,16 @@ it('refuses a form it does not declare, and fields its form refuses (6, 7)', fun
         ->and(fn () => $this->reception->receive($this->site, 'contact', contact(['email' => 'x']), '203.0.113.7'))->toThrow(InvalidForm::class);
 });
 
-it('never stores the visitor\'s address (5)', function (): void {
+it('never stores the visitor\'s address, and keys its hash outside the database (5)', function (): void {
+    $this->reception->receive($this->site, 'contact', contact(), '198.51.100.23');
+    $key = $this->storage->files[Reception::KEY];
     $this->reception->receive($this->site, 'contact', contact(), '198.51.100.23');
 
     $stored = TestCase::pdo()->query('SELECT form_submissions_ip_hash FROM form_submissions ORDER BY form_submissions_id DESC LIMIT 1')->fetchColumn();
 
-    expect($stored)->toMatch('/^[0-9a-f]{64}$/')
-        ->and($stored)->not->toContain('198.51.100.23');
+    expect($stored)->toBe(hash_hmac('sha256', '198.51.100.23|2026-01-01|' . $this->site->id, $key))
+        ->and($key)->toMatch('/^[0-9a-f]{64}$/')
+        ->and($this->storage->files[Reception::KEY])->toBe($key);
 });
 
 it('makes a site, refuses a second with its slug, replaces a key at once, and disables it (2, 13)', function (): void {

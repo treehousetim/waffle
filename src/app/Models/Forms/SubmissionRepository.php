@@ -90,6 +90,26 @@ final readonly class SubmissionRepository
         return $statement->rowCount();
     }
 
+    public function transactional(callable $work): mixed
+    {
+        if ($this->pdo->inTransaction()) {
+            return $work();
+        }
+
+        $this->pdo->beginTransaction();
+
+        try {
+            $result = $work();
+            $this->pdo->commit();
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
+    }
+
     private function statusId(SubmissionStatus $status): int
     {
         return $this->types->id('submission_status', $status->value);

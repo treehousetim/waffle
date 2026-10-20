@@ -69,6 +69,14 @@ it('revokes an invitation, after which its link is not valid (2, 13)', function 
         ->and($this->get("/api/invite/{$made['token']}")->getStatusCode())->toBe(404);
 });
 
+it('refuses an administrator revoking an administrator\'s invitation with 403 (4)', function (): void {
+    $this->asOwner();
+    $id = $this->json($this->post('/api/invitations', ['email' => 'second-admin@example.test', 'level' => 'administrator']))['data']['invitation']['id'];
+    $this->asAdministrator();
+
+    expect($this->post("/api/invitations/{$id}/revoke")->getStatusCode())->toBe(403);
+});
+
 it('answers every unusable link the same way (8)', function (): void {
     foreach (['short', str_repeat('A', 43)] as $token) {
         $response = $this->get("/api/invite/{$token}");

@@ -34,7 +34,7 @@ final class SiteFormController extends BaseController
         /** @var Site $site */
         $site = $request->getAttribute('site');
         $input = $this->body($request);
-        $address = Visitor::address($request->getHeaderLine('X-Forwarded-For'), (string) ($request->getServerParams()['REMOTE_ADDR'] ?? ''));
+        $address = Visitor::address($request->getHeaderLine('X-Visitor-Address'), (string) ($request->getServerParams()['REMOTE_ADDR'] ?? ''));
         $browser = !str_starts_with(strtolower($request->getHeaderLine('Content-Type')), 'application/json');
 
         try {

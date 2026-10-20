@@ -103,7 +103,7 @@ it('makes the account at the invited level and uses the link up (1, 5)', functio
 
 it('refuses to accept an expired, revoked or malformed link, or an unusable password (2, 9)', function (): void {
     [$revoked, $revokedToken] = inviteSomeone($this, 'r@example.test');
-    $this->invitations->revoke($revoked->id);
+    $this->invitations->revoke($revoked->id, Role::Owner);
     [, $expiredToken] = inviteSomeone($this, 'e@example.test');
     $this->clock->advance('+8 days');
 
@@ -126,8 +126,18 @@ it('turns an account made since the invitation into a refusal, leaving the invit
 
 it('revokes only a pending invitation, and answers not found for none (13)', function (): void {
     [$invitation] = inviteSomeone($this);
-    $this->invitations->revoke($invitation->id);
+    $this->invitations->revoke($invitation->id, Role::Owner);
 
-    expect(fn () => $this->invitations->revoke($invitation->id))->toThrow(IllegalTransition::class)
-        ->and(fn () => $this->invitations->revoke(999_999))->toThrow(InvitationNotFound::class, 'There is no invitation with that id.');
+    expect(fn () => $this->invitations->revoke($invitation->id, Role::Owner))->toThrow(IllegalTransition::class)
+        ->and(fn () => $this->invitations->revoke(999_999, Role::Owner))->toThrow(InvitationNotFound::class, 'There is no invitation with that id.');
+});
+
+it('lets an administrator revoke users\' invitations only (4)', function (): void {
+    [$forAdministrator] = inviteSomeone($this, 'admin-to-be@example.test', Role::Administrator);
+    [$forUser] = inviteSomeone($this, 'user-to-be@example.test', Role::User);
+
+    expect(fn () => $this->invitations->revoke($forAdministrator->id, Role::Administrator))
+        ->toThrow(InvalidInvitation::class, 'You cannot revoke an invitation at that level.')
+        ->and($this->invitations->revoke($forUser->id, Role::Administrator)->status)->toBe(InvitationStatus::Revoked)
+        ->and($this->repository->find($forAdministrator->id)->status)->toBe(InvitationStatus::Pending);
 });

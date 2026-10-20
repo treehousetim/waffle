@@ -36,12 +36,14 @@ it('issues a site key once and keeps only its hash (2)', function (): void {
 });
 
 it('hashes a visitor with the day and the site, and reads the address the site\'s server wrote (5)', function (): void {
-    $today = Visitor::hash('203.0.113.7', '2026-01-01', 'site-a');
+    $today = Visitor::hash('203.0.113.7', '2026-01-01', 1, 'key');
 
-    expect($today)->toBe(hash('sha256', '203.0.113.7|2026-01-01|site-a'))
-        ->and(Visitor::hash('203.0.113.7', '2026-01-02', 'site-a'))->not->toBe($today)
-        ->and(Visitor::hash('203.0.113.7', '2026-01-01', 'site-b'))->not->toBe($today)
-        ->and(Visitor::address('203.0.113.7, 10.0.0.2', '10.0.0.9'))->toBe('203.0.113.7')
+    expect($today)->toBe(hash_hmac('sha256', '203.0.113.7|2026-01-01|1', 'key'))
+        ->and(Visitor::hash('203.0.113.7', '2026-01-02', 1, 'key'))->not->toBe($today)
+        ->and(Visitor::hash('203.0.113.7', '2026-01-01', 2, 'key'))->not->toBe($today)
+        ->and(Visitor::hash('203.0.113.7', '2026-01-01', 1, 'another key'))->not->toBe($today)
+        ->and(Visitor::address(' 203.0.113.7 ', '10.0.0.9'))->toBe('203.0.113.7')
+        ->and(Visitor::address('203.0.113.7, 10.0.0.2', '10.0.0.9'))->toBe('10.0.0.9')
         ->and(Visitor::address('not an address', '10.0.0.9'))->toBe('10.0.0.9')
         ->and(Visitor::address('', '10.0.0.9'))->toBe('10.0.0.9');
 });

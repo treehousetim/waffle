@@ -23,8 +23,10 @@ nothing.
 3. **The honeypot**: a filled `company_website` is answered exactly like a
    good submission, and nothing is kept.
 4. **The rate limit**: at most 5 submissions from one visitor address in 10
-   minutes, or 429. The address is never stored: only a SHA-256 of it with
-   the date and the site, which changes daily.
+   minutes, or 429. The address comes from `X-Visitor-Address`, which the
+   site's Caddy writes (never `X-Forwarded-For`: the app's own Caddy rewrites
+   that to the site server's address). It is never stored: only a keyed hash
+   of it with the date and the site, which changes daily.
 5. The form's parser checks every field (`Domain/Forms`); a refusal is 422
    with an `error` and a message per field.
 6. The submission is kept as `new`, with the fields as the parser returned

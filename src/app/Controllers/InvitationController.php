@@ -64,9 +64,11 @@ final class InvitationController extends BaseController
         $number = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
         try {
-            $invitation = $this->invitations->revoke($number === false ? 0 : $number);
+            $invitation = $this->invitations->revoke($number === false ? 0 : $number, $this->identity->role());
         } catch (InvitationNotFound $e) {
             return $this->jsonError($response, $e->getMessage(), 404);
+        } catch (InvalidInvitation $e) {
+            return $this->jsonError($response, $e->getMessage(), 403);
         } catch (IllegalTransition) {
             return $this->jsonError($response, 'Only an invitation that is still waiting can be revoked.', 409);
         }

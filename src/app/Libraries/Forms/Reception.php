@@ -8,6 +8,7 @@ use App\Domain\Forms\FormDefinitions;
 use App\Domain\Forms\InvalidForm;
 use App\Domain\Forms\Visitor;
 use App\Domain\Ports\ClockPort;
+use App\Domain\Ports\StoragePort;
 use App\Models\Forms\Site;
 use App\Models\Forms\SubmissionRepository;
 
@@ -25,10 +26,14 @@ final readonly class Reception
 
     public const string WINDOW = '-10 minutes';
 
+    /** Where the visitor hash's key is kept: in storage, not the database (5.). */
+    public const string KEY = 'forms/visitor-key';
+
     public function __construct(
         private FormDefinitions $forms,
         private SubmissionRepository $submissions,
         private ClockPort $clock,
+        private StoragePort $storage,
     ) {
     }
 
@@ -49,7 +54,7 @@ final readonly class Reception
             return $form->thanks;
         }
 
-        $visitor = Visitor::hash($address, $now->format('Y-m-d'), (string) $site->keyHash);
+        $visitor = Visitor::hash($address, $now->format('Y-m-d'), $site->id, $this->visitorKey());
 
         if ($this->submissions->countSince($visitor, $now->modify(self::WINDOW)) >= self::LIMIT) {
             throw new TooManySubmissions('Too many tries. Please wait a few minutes and send it again.');
@@ -58,5 +63,18 @@ final readonly class Reception
         $this->submissions->insert($form->name, $site->id, $form->fields->parse($input), $visitor, $now);
 
         return $form->thanks;
+    }
+
+    /** The visitor hash's key: made once, at random, the first time it is needed. */
+    private function visitorKey(): string
+    {
+        $key = $this->storage->get(self::KEY);
+
+        if ($key === null) {
+            $key = bin2hex(random_bytes(32));
+            $this->storage->put(self::KEY, $key);
+        }
+
+        return $key;
     }
 }

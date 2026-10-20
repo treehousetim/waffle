@@ -144,6 +144,7 @@ it('starts no session for the site API, and one for everything else', function (
 })->with([
     'the site API' => ['/api/site/posts', false],
     'the site API with a query' => ['/api/site/posts?page=2', false],
+    'the site API, percent-encoded' => ['/api/%73ite/posts', false],
     'the app API' => ['/api/auth/me', true],
     'a page' => ['/posts', true],
     'a path that only looks like it' => ['/api/sites', true],

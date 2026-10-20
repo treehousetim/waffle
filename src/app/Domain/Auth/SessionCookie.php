@@ -26,7 +26,8 @@ final readonly class SessionCookie
      */
     public static function wantedFor(string $requestUri): bool
     {
-        $path = (string) parse_url($requestUri, PHP_URL_PATH);
+        // Decoded as the router decodes it, so /api/%73ite/ is the site API too.
+        $path = rawurldecode((string) parse_url($requestUri, PHP_URL_PATH));
 
         return !str_starts_with($path, '/api/site/');
     }

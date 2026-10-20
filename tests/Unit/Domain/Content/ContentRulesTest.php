@@ -146,6 +146,10 @@ it('refuses raw HTML, images and unsafe links in Markdown (9)', function (string
     'a relative path' => ['[x](events)', 'The link to “events” is not allowed'],
     'a bad reference' => ["[x][r]\n\n[r]: javascript:alert(1)", 'The link to “javascript:alert(1)” is not allowed'],
     'a mailto without an address' => ['[x](mailto:nobody)', 'The link to “mailto:nobody” is not allowed'],
+    'HTML between escaped backticks' => ['\\`<img src=x onerror=alert(1)>\\`', 'The body holds HTML.'],
+    'HTML in a code span broken by a blank line' => ["`a\n\n<b>x</b>\n\n`", 'The body holds HTML.'],
+    'a bad reference in a quotation' => ["[x][r]\n\n> [r]: javascript:alert(1)", 'The link to “javascript:alert(1)” is not allowed'],
+    'a bad reference in a list' => ["[x][r]\n\n- [r]: javascript:alert(1)", 'The link to “javascript:alert(1)” is not allowed'],
 ]);
 
 it('declares only identifiers that can name a table or column (15)', function (string $name, string $singular): void {

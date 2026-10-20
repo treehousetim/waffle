@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Content;
 
 /**
- * The rules for a Markdown body (docs/content.md, 9.). The site renders it
- * with HTML switched off as well; this tells staff when they save, not when a
- * page comes out wrong.
+ * The rules for a Markdown body (docs/content.md, 9.). This tells staff when
+ * they save; it is not the only defence: the site also sanitises the HTML it
+ * renders, keeping only plain tags and safe links (Waffle Site's
+ * src/core/lib/sanitize.js).
  *
  * Code (fenced blocks and `inline spans`) may show anything, so it is set
  * aside before the checks. Outside it: no HTML tags, comments or processing
@@ -66,9 +67,13 @@ final class Markdown
 
     private static function withoutCode(string $text): string
     {
+        // An escaped character is never markup, and an escaped backtick never
+        // opens code: drop escapes first, so `\`<b>\`` is not mistaken for code.
+        $text = (string) preg_replace('/\\\\./s', '  ', $text);
         $text = (string) preg_replace('/^ {0,3}(`{3,}|~{3,})[^\n]*\n.*?(?:^ {0,3}\1[^\n]*$|\z)/ms', '', $text);
 
-        return (string) preg_replace('/(`+)(?!`).+?(?<!`)\1(?!`)/s', '', $text);
+        // A code span never runs across a blank line: that ends the paragraph.
+        return (string) preg_replace('/(`+)(?!`)(?:(?!\n[ \t]*\n).)+?(?<!`)\1(?!`)/s', '', $text);
     }
 
     /**
@@ -79,7 +84,8 @@ final class Markdown
     private static function destinations(string $prose): array
     {
         preg_match_all('/\]\(\s*<?([^)\s>]*)/', $prose, $inline);
-        preg_match_all('/^ {0,3}\[[^\]]+\]:\s*<?([^\s>]+)/m', $prose, $references);
+        // Reference definitions, also inside a quotation or a list item.
+        preg_match_all('/^(?:[ \t]*(?:>|[-+*]|\d{1,9}[.)])(?=[ \t]))*[ \t]*\[[^\]]+\]:\s*<?([^\s>]+)/m', $prose, $references);
 
         return [...$inline[1], ...$references[1]];
     }

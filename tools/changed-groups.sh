@@ -41,7 +41,7 @@ for file in $changed; do
 
         src/app/Libraries/Storage/*|src/app/Domain/Ports/StoragePort.php|tests/Unit/Libraries/LocalDiskStorageTest.php)
             groups="$groups storage" ;;
-        src/app/Domain/Forms/*|src/app/Libraries/Forms/*|src/app/Models/Forms/*|tests/Unit/Domain/Forms/*|tests/Unit/Libraries/Forms/*|tests/Feature/FormsTest.php)
+        src/app/Domain/Forms/*|src/app/Libraries/Forms/*|src/app/Models/Forms/*|tests/Unit/Domain/Forms/*|tests/Unit/Libraries/Forms/*|tests/Feature/FormsTest.php|tests/Schema/FormsTransactionTest.php)
             groups="$groups forms" ;;
         src/app/Domain/Invitations/*|src/app/Libraries/Invitations/*|src/app/Models/Invitation*|tests/Unit/Domain/Invitations/*|tests/Unit/Libraries/Invitations/*|tests/Feature/InvitationsTest.php|tests/Schema/InvitationsTransactionTest.php)
             groups="$groups invitations" ;;

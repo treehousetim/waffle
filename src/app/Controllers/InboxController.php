@@ -52,16 +52,25 @@ final class InboxController extends BaseController
     private function decide(ResponseInterface $response, string $id, SubmissionStatus $next): ResponseInterface
     {
         $number = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $submission = $number === false ? null : $this->submissions->find($number);
+
+        // Under the row's lock, so two people marking it at once take turns
+        // and the second is refused (12.).
+        try {
+            $submission = $this->submissions->transactional(function () use ($number, $next): ?Submission {
+                $submission = $number === false ? null : $this->submissions->find($number, true);
+
+                if ($submission !== null) {
+                    $this->submissions->decide($submission, $next, (int) $this->identity->id(), $this->clock->now());
+                }
+
+                return $submission;
+            });
+        } catch (IllegalTransition) {
+            return $this->jsonError($response, 'Only a new submission can be marked.', 409);
+        }
 
         if ($submission === null) {
             return $this->jsonError($response, 'There is no submission with that id.', 404);
-        }
-
-        try {
-            $this->submissions->decide($submission, $next, (int) $this->identity->id(), $this->clock->now());
-        } catch (IllegalTransition) {
-            return $this->jsonError($response, 'Only a new submission can be marked.', 409);
         }
 
         return $this->jsonSuccess($response, ['submission' => $this->submissions->find($submission->id)?->toArray()]);

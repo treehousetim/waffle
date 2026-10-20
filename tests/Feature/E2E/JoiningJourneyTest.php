@@ -24,7 +24,7 @@ it('takes a visitor from the contact form to a signed-in account, and records wh
     $sent = TestCase::app()->handle((new ServerRequestFactory())
         ->createServerRequest('POST', 'http://localhost/api/site/forms/contact', ['REMOTE_ADDR' => '10.0.0.5'])
         ->withHeader('X-Site-Key', $key)
-        ->withHeader('X-Forwarded-For', '203.0.113.60')
+        ->withHeader('X-Visitor-Address', '203.0.113.60')
         ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
         ->withBody((new StreamFactory())->createStream(http_build_query([
             'name' => 'Grace', 'email' => 'grace@example.test', 'message' => 'Can I come along?', 'redirect' => '/contact/thanks/',
