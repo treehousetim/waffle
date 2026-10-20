@@ -144,6 +144,7 @@ uses()->group('content')->in(
     'Feature/MediaTest.php',
     'Unit/Libraries/GdImagesTest.php',
     'Feature/E2E/PublishingJourneyTest.php',
+    'Feature/E2E/MediaJourneyTest.php',
     'Schema/ContentTransactionTest.php',
 );
 
