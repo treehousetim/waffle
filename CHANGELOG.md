@@ -13,6 +13,7 @@ Each release moves everything under `[Unreleased]` into its own section
 ## [Unreleased]
 
 ### Fixed
+- **Signing in from a browser on a port that is not the default** (`:8080` locally, or any address with a port) was refused as cross-site: Slim builds the request's Host header without the port, so it never matched the browser's `Origin`. The same-site check now compares the origin with the request's own host and port. Found previewing KAW Meetup over Tailscale. Porting: the change is in `SameSiteMiddleware` and `tests/Feature/CrossSiteTest.php`.
 - **A project made from Waffle passes its own tests.** Found by the first real project, KAW Meetup: `CreateProjectTest` runs the rename against the framework's own files and placeholders, which a project no longer has, so the rename now removes it (failure 19 in docs/create-project.md); `ReleaseTest` wrote the framework's repository name escaped, where the rename changed it, and now writes it plainly; a test forbids escaped placeholders. Proven on a fresh project: its whole gate passes. Porting: delete `tests/Unit/CreateProjectTest.php` and its line in `tests/Pest.php`.
 
 ### Changed

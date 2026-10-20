@@ -37,11 +37,17 @@ final readonly class SameSiteMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        // The request's own host and port, from its URI: Slim builds the Host
+        // header without the port, so on a port that is not the default
+        // (:8080 locally) the header never matches a browser's Origin.
+        $uri = $request->getUri();
+        $host = $uri->getHost() . ($uri->getPort() === null ? '' : ':' . $uri->getPort());
+
         $forbidden = CrossSiteRequest::isForbidden(
             $request->getMethod(),
             $request->getHeaderLine('Sec-Fetch-Site'),
             $request->getHeaderLine('Origin'),
-            $request->getHeaderLine('Host'),
+            $host,
         );
 
         if ($forbidden) {

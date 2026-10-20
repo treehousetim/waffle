@@ -65,3 +65,34 @@ it('refuses the same form write when the path is percent-encoded', function (): 
     expect($response->getStatusCode())->toBe(415)
         ->and($this->json($response)['error'])->toBe('Only JSON is accepted here.');
 });
+
+it('accepts a write from the same origin on a port that is not the default', function (): void {
+    // Locally the app is on :8080. Slim builds the request's Host header from
+    // the URI without its port, so the origin must be compared with the
+    // request's own host and port, or every browser sign-in is refused.
+    $id = Factory::createUser();
+    [$email] = Factory::credentialsFor($id);
+
+    $response = $this->app()->handle(onPort(8080, 'http://localhost:8080', $email));
+
+    expect($response->getStatusCode())->toBe(200);
+});
+
+it('refuses a write whose Origin names the same host on another port', function (): void {
+    $response = $this->app()->handle(onPort(8080, 'http://localhost:9999', 'a@b.c'));
+
+    expect($response->getStatusCode())->toBe(403);
+});
+
+/** A sign-in to http://localhost:<port>, from $origin, with no fetch metadata. */
+function onPort(int $port, string $origin, string $email): Psr\Http\Message\ServerRequestInterface
+{
+    return (new Slim\Psr7\Factory\ServerRequestFactory())
+        ->createServerRequest('POST', "http://localhost:{$port}/api/auth/login", ['REMOTE_ADDR' => '127.0.0.1'])
+        ->withHeader('Origin', $origin)
+        ->withHeader('Content-Type', 'application/json')
+        ->withBody((new Slim\Psr7\Factory\StreamFactory())->createStream(json_encode([
+            'email' => $email,
+            'password' => Tests\Support\Factory::PASSWORD,
+        ], JSON_THROW_ON_ERROR)));
+}
