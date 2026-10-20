@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Content\PublishStatus;
 use App\Domain\Queue\JobStatus;
 use App\Domain\Queue\RunOutcome;
 use App\Domain\Settings\SettingType;
@@ -30,6 +31,7 @@ it('has exactly one types row per enum case', function (string $enum, string $gr
     'setting types' => [SettingType::class, 'setting_type'],
     'job statuses' => [JobStatus::class, 'job_status'],
     'job run outcomes' => [RunOutcome::class, 'job_run_outcome'],
+    'publish statuses' => [PublishStatus::class, 'publish_status'],
 ]);
 
 it('has exactly one `job` types row per registered job handler (docs/queue.md, 11)', function (): void {

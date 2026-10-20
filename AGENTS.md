@@ -55,6 +55,7 @@ Use exactly these majors, latest patch at install time.
 | DI | PHP-DI | `php-di/php-di` ^7.1, `php-di/slim-bridge` ^3.4 |
 | Auth | Delight\Auth | `delight-im/auth` ^9.0 — session-based, roles via its bitmask |
 | Migrations | Phinx | `robmorgan/phinx` ^0.16 |
+| HTTP client (PHP) | Guzzle | `guzzlehttp/guzzle` ^8.1 — only in `Libraries/Clients/` (change notices to the site) |
 | Env loading | `vlucas/phpdotenv` | ^5.7 (tests only read `.env.testing` with it; nothing else loads a file) |
 | Tests | Pest | `pestphp/pest` ^4 (brings PHPUnit 12) + `pestphp/pest-plugin-arch` ^4, dev only; `pcov` for coverage. Pest 5 / PHPUnit 13 exists; stay on 4 unless told otherwise. |
 | Database | MariaDB | 12.3 (`mariadb:12.3`) |
@@ -73,7 +74,6 @@ Use exactly these majors, latest patch at install time.
 
 | Need | Library |
 |---|---|
-| HTTP client (PHP) | Guzzle, `guzzlehttp/guzzle` ^8.1 |
 | SSH | `phpseclib/phpseclib` ^4.0 |
 | Dates (JS) | date-fns 4.4 |
 | Charts | chart.js 4.5 + vue-chartjs 5.3 |
@@ -161,6 +161,7 @@ The application's own tables, and the rules every new one follows. Add each enti
 - **User** — Delight\Auth's `users` table (and its `users_*` siblings), read through `UserRepository`, written only through `IdentityPort`. The one documented exception to the column-prefix rule: they are the library's tables, not ours. `status` other than 0 means the account is turned off, and `AuthMiddleware` ends such a session on its next request.
 - **Type** — the shared `types` lookup table (`types_group`, `types_name`, `types_label`, `types_sort`). Every status or type column is a foreign key into it. See "Statuses are enums *and* lookup rows" below.
 - **Job** — the `jobs` table (and `job_runs`, one row per attempt): work enqueued through `QueuePort` and run by the `worker` service. Statuses `pending` → `running` → `done`, back to `pending` to retry, or `dead`, in `JobStatus`; a job's type is a `types` row in group `job` with a handler keyed `job:<type>`. See `docs/queue.md`.
+- **Record** — one row of a record type a site publishes (`posts`), with its `<t>_revisions` (every publish) and `<t>_slugs` (every slug, kept forever). Statuses `draft` → `published` → `retired` → `published`, in `PublishStatus`. The row is the working copy; the site gets the latest revision. Each type is a `record_type:<name>` definition; see `docs/content.md` and the design in `docs/content-model.md`.
 - **Setting** — the `settings` key/value table. Each row carries its own presentation metadata (label, description, type, options, group, editable, sort) so the Settings page renders itself and the save allowlist derives from `settings_editable`. Configuration only; secrets are never moved here. See `docs/settings.md`.
 
 **Status transitions live in `Domain/` state machines with explicit allowed edges. Repositories never set a status directly.** A repository writes what the state machine decided; it does not decide.

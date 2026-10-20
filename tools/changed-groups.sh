@@ -39,6 +39,8 @@ for file in $changed; do
         src/app/Domain/Settings/*|tests/Unit/Domain/Settings/*|tests/Feature/SettingsTest.php)
             groups="$groups settings" ;;
 
+        src/app/Domain/Content/*|src/app/Libraries/Content/*|src/app/Models/Content/*|tests/Unit/Domain/Content/*|tests/Unit/Libraries/Content/*|tests/Feature/ContentTest.php|tests/Feature/SiteContentTest.php|tests/Schema/ContentTransactionTest.php)
+            groups="$groups content" ;;
         src/app/Domain/Queue/*|src/app/Libraries/Queue/*|tests/Unit/Domain/Queue/*|tests/Unit/Libraries/Queue/*|tests/Feature/QueueTest.php|tests/Schema/QueueTransactionTest.php|tests/Unit/WorkerServiceTest.php|src/cli/worker.php)
             groups="$groups queue" ;;
 

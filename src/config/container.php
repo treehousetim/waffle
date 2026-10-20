@@ -71,6 +71,12 @@ $definitions = [
             'env' => $str('APP_ENV', 'production'),
             'debug' => $bool('APP_DEBUG', false),
         ],
+        // The site to send change notices to (docs/content.md): its GitHub
+        // repository, and a token allowed to dispatch to it (Doppler).
+        'site' => [
+            'repository' => $str('SITE_REPOSITORY', ''),
+            'dispatch_token' => $str('SITE_DISPATCH_TOKEN', ''),
+        ],
         'paths' => [
             'root' => $root,
             'public' => $root . '/src/public',
@@ -259,6 +265,16 @@ foreach (glob(__DIR__ . '/container/*.php') ?: [] as $fragment) {
 $definitions['queue.job_types'] = array_values(array_map(
     static fn (string $key): string => substr($key, strlen('job:')),
     array_filter(array_keys($definitions), static fn (string $key): bool => str_starts_with($key, 'job:')),
+));
+
+/*
+ * The content slice's record types (docs/content.md): every definition keyed
+ * `record_type:<name>` is that type's RecordType, gathered the same way, so a
+ * slice adds a record type in its own fragment.
+ */
+$definitions['content.record_types'] = array_values(array_map(
+    static fn (string $key): string => substr($key, strlen('record_type:')),
+    array_filter(array_keys($definitions), static fn (string $key): bool => str_starts_with($key, 'record_type:')),
 ));
 
 return $definitions;

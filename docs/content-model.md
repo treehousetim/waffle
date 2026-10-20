@@ -1,6 +1,7 @@
 # The content model
 
-**Status: decided 2026-10-19, not built.** No table here exists yet. It ships
+**Status: decided 2026-10-19; partly built** (docs/content.md has what
+exists: publishing, revisions, slugs, posts, the site API, change notices). It ships
 **in the skeleton**, as the backend every derived project starts with (the
 tables, publishing, the site API), built on the skeleton's queue
 (docs/queue.md). Any editing screens it brings are plain and unstyled: the look

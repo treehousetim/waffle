@@ -86,6 +86,11 @@ services:
 
       CRON_SECRET: ${CRON_SECRET:-}
 
+      # Change notices to the site (docs/content.md). Unset here, so a
+      # development box tells no site anything; production sets both.
+      SITE_REPOSITORY: ${SITE_REPOSITORY:-}
+      SITE_DISPATCH_TOKEN: ${SITE_DISPATCH_TOKEN:-}
+
       # Bootstrap credentials for the very first owner account, read once by
       # the CreateInitialOwner migration. Both may be deleted from Doppler
       # after the account exists — the migration is recorded in phinxlog by

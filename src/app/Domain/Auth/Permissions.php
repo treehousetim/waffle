@@ -19,6 +19,8 @@ final class Permissions
             Permission::Home,
             Permission::SettingsView,
             Permission::QueueManage,
+            Permission::ContentEdit,
+            Permission::ContentPublish,
         ],
         'user' => [
             Permission::Home,

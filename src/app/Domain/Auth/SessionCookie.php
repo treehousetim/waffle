@@ -19,6 +19,19 @@ namespace App\Domain\Auth;
 final readonly class SessionCookie
 {
     /**
+     * Whether a request to this path gets a session at all. The site API
+     * (`/api/site/`) never does: a site's visitors and builds are not people
+     * signed in to the app, and must never be handed a session cookie
+     * (docs/content.md; Waffle Site's docs/waffle-api.md).
+     */
+    public static function wantedFor(string $requestUri): bool
+    {
+        $path = (string) parse_url($requestUri, PHP_URL_PATH);
+
+        return !str_starts_with($path, '/api/site/');
+    }
+
+    /**
      * @return array{lifetime:int,path:string,domain:string,secure:bool,httponly:bool,samesite:string}
      *
      * @param bool $overHttps whether this request arrived over TLS. Production

@@ -111,6 +111,15 @@ uses()->group('queue')->in(
     'Unit/WorkerServiceTest.php',
 );
 
+// The content slice (docs/content.md).
+uses()->group('content')->in(
+    'Unit/Domain/Content',
+    'Unit/Libraries/Content',
+    'Feature/ContentTest.php',
+    'Feature/SiteContentTest.php',
+    'Schema/ContentTransactionTest.php',
+);
+
 // End-to-end tests: a whole feature through the router, ending in an artifact
 // under coverage/e2e/ (see tests/Support/E2EArtifact.php).
 uses()->group('e2e')->in(

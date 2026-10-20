@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE && App\Domain\Auth\SessionCookie::wantedFor((string) ($_SERVER['REQUEST_URI'] ?? '/'))) {
     /*
      * The cookie's attributes, before the session exists -- the only moment
      * they can be set. A bare session_start() takes PHP's defaults: no

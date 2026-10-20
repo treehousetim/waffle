@@ -15,6 +15,8 @@ declare(strict_types=1);
 $vendorSdks = [
     // Delight\Auth is final and untestable, which is why IdentityPort exists.
     'Delight\\',
+    // Guzzle reaches the network; only Libraries/Clients/ may use it.
+    'GuzzleHttp\\',
     // Add every SDK or client library you take on here, the day you add it to
     // composer.json (e.g. 'GuzzleHttp\\', 'Anthropic\\', 'phpseclib3\\').
 ];

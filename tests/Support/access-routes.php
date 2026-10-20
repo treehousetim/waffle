@@ -18,6 +18,9 @@ const UNGUARDED = [
     'POST /api/auth/logout',
     // Any signed-in session may ask who it is, whatever its level.
     'GET /api/auth/me',
+    // The site API: public, read-only, published content only (docs/content.md).
+    'GET /api/site/posts',
+    'GET /api/site/posts/retired',
 ];
 
 /** @return array<string,Permission> "METHOD pattern" => permission */
@@ -30,6 +33,13 @@ function guardedRoutes(): array
         'GET /api/queue' => Permission::QueueManage,
         'POST /api/queue/jobs/{id}/retry' => Permission::QueueManage,
         'DELETE /api/queue/jobs/{id}' => Permission::QueueManage,
+        'GET /api/content/{type}' => Permission::ContentEdit,
+        'POST /api/content/{type}' => Permission::ContentEdit,
+        'GET /api/content/{type}/{id}' => Permission::ContentEdit,
+        'PUT /api/content/{type}/{id}' => Permission::ContentEdit,
+        'POST /api/content/{type}/{id}/publish' => Permission::ContentPublish,
+        'POST /api/content/{type}/{id}/retire' => Permission::ContentPublish,
+        'POST /api/content/{type}/{id}/revisions/{revision}/restore' => Permission::ContentPublish,
     ];
 }
 

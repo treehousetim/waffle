@@ -22,4 +22,6 @@ enum Permission: string
     case SettingsView = 'settings-view';
     case SettingsEdit = 'settings-edit';
     case QueueManage = 'queue-manage';
+    case ContentEdit = 'content-edit';
+    case ContentPublish = 'content-publish';
 }

@@ -29,6 +29,13 @@ export const routes = [
     meta: { title: 'Settings', permission: 'settings-view', nav: true }
   },
   {
+    path: '/posts',
+    name: 'posts',
+    component: () => import('@/views/ContentView.vue'),
+    props: { type: 'posts', label: 'Posts' },
+    meta: { title: 'Posts', permission: 'content-edit', nav: true }
+  },
+  {
     path: '/queue',
     name: 'queue',
     component: () => import('@/views/QueueView.vue'),

@@ -22,6 +22,7 @@ use App\Controllers\CronController;
 use App\Controllers\HelloController;
 use App\Domain\Auth\Permission;
 use App\Libraries\Middleware\AuthMiddleware;
+use App\Libraries\Middleware\Deferred;
 use App\Libraries\Middleware\CronMiddleware;
 use Psr\Container\ContainerInterface;
 use Slim\App;
@@ -34,19 +35,22 @@ return static function (App $app, ContainerInterface $container): void {
 
     // -- authenticated -----------------------------------------------------
     // Each route names the permission it needs (docs/access-levels.md).
-    $can = static fn (Permission $permission): mixed => $container->get('can:' . $permission->value);
+    // Middleware is named or deferred, not built here: it is built when a
+    // route that uses it runs, so a request that never needs the session
+    // (the site API) never constructs Delight\Auth, which would start one.
+    $can = static fn (Permission $permission): Deferred => new Deferred($container, 'can:' . $permission->value);
 
     $app->group('/api', function (RouteCollectorProxy $api) use ($can): void {
         // Who am I: any signed-in session, whatever its level.
         $api->get('/auth/me', [AuthController::class, 'me']);
 
         $api->get('/hello', [HelloController::class, 'index'])->add($can(Permission::Home));
-    })->add($container->get(AuthMiddleware::class));
+    })->add(AuthMiddleware::class);
 
     // -- cron --------------------------------------------------------------
     $app->group('/cron', function (RouteCollectorProxy $cron): void {
         $cron->get('/health', [CronController::class, 'health']);
-    })->add($container->get(CronMiddleware::class));
+    })->add(CronMiddleware::class);
 
     /*
      * Per-slice routes. Each feature slice owns one file in src/config/routes/

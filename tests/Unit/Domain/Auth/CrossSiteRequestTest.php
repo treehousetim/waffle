@@ -138,3 +138,13 @@ it('decodes the path before deciding it is outside /api, as the router does', fu
         ->and(CrossSiteRequest::isFormBody('POST', '/%61%70%69/settings', 'text/plain'))->toBeTrue()
         ->and(CrossSiteRequest::isFormBody('POST', '/%77ebhooks/example', 'application/x-www-form-urlencoded'))->toBeFalse();
 });
+
+it('starts no session for the site API, and one for everything else', function (string $uri, bool $wanted): void {
+    expect(App\Domain\Auth\SessionCookie::wantedFor($uri))->toBe($wanted);
+})->with([
+    'the site API' => ['/api/site/posts', false],
+    'the site API with a query' => ['/api/site/posts?page=2', false],
+    'the app API' => ['/api/auth/me', true],
+    'a page' => ['/posts', true],
+    'a path that only looks like it' => ['/api/sites', true],
+]);

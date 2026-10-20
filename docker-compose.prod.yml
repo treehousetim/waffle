@@ -34,6 +34,9 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: ""
+      # The site's repository (owner/name), where change notices go
+      # (docs/content.md); its token is in Doppler. Empty: no site.
+      SITE_REPOSITORY: ""
 
     # !override REPLACES the base file's volume list.
     #
@@ -60,6 +63,9 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: ""
+      # The site's repository (owner/name), where change notices go
+      # (docs/content.md); its token is in Doppler. Empty: no site.
+      SITE_REPOSITORY: ""
     volumes: !override
       - .:/var/www
     command: sh -c "exec php src/cli/worker.php"

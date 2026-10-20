@@ -18,7 +18,7 @@ it('gives the owner every permission there is', function (): void {
 it('gives each lower level exactly its row of the grid', function (Role $role, array $expected): void {
     expect(Permissions::valuesFor($role))->toBe($expected);
 })->with([
-    'administrator' => [Role::Administrator, ['home', 'settings-view', 'queue-manage']],
+    'administrator' => [Role::Administrator, ['home', 'settings-view', 'queue-manage', 'content-edit', 'content-publish']],
     'user' => [Role::User, ['home']],
 ]);
 
