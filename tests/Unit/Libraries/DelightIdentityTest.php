@@ -133,3 +133,22 @@ it('translates Delight rate limiting into TooManyAttempts', function (): void {
     expect($thrown)->toBeInstanceOf(TooManyAttempts::class)
         ->and($thrown->getMessage())->toBe('Too many attempts. Try again shortly.');
 });
+
+it('gives an account exactly one level, or none, and refuses an account that does not exist', function (): void {
+    $id = Factory::createUser(Role::User, 'promoted@example.test');
+    $mask = static function (int $id): int {
+        $statement = TestCase::pdo()->prepare('SELECT roles_mask FROM users WHERE id = ?');
+        $statement->execute([$id]);
+
+        return (int) $statement->fetchColumn();
+    };
+
+    $this->identity->setRole($id, Role::Administrator);
+    $promoted = $mask($id);
+    $this->identity->setRole($id, null);
+
+    expect($promoted)->toBe(Role::Administrator->mask())
+        ->and($mask($id))->toBe(0)
+        ->and(fn () => $this->identity->setRole(999_999, Role::User))
+        ->toThrow(InvalidArgumentException::class, 'There is no account 999999.');
+});

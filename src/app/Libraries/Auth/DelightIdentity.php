@@ -16,6 +16,8 @@ use Delight\Auth\EmailNotVerifiedException;
 use Delight\Auth\InvalidEmailException;
 use Delight\Auth\InvalidPasswordException;
 use Delight\Auth\TooManyRequestsException;
+use Delight\Auth\UnknownIdException;
+use InvalidArgumentException;
 
 /**
  * The only class in the application that knows Delight\Auth exists (apart from
@@ -112,5 +114,20 @@ final readonly class DelightIdentity implements IdentityPort
     public function logout(): void
     {
         $this->auth->logOut();
+    }
+
+    public function setRole(int $userId, ?Role $role): void
+    {
+        try {
+            foreach (Role::cases() as $level) {
+                if ($level === $role) {
+                    $this->auth->admin()->addRoleForUserById($userId, $level->mask());
+                } else {
+                    $this->auth->admin()->removeRoleForUserById($userId, $level->mask());
+                }
+            }
+        } catch (UnknownIdException) {
+            throw new InvalidArgumentException("There is no account {$userId}.");
+        }
     }
 }

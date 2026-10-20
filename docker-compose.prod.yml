@@ -47,6 +47,7 @@ services:
     # bind mount is the whole point — the shipped vendor/ is the one that runs.
     volumes: !override
       - .:/var/www
+      - storage_data:/var/www/storage
 
     # No composer on the server. vendor/ arrives complete from the runner, so a
     # deploy cannot half-fail because Packagist was unreachable.
@@ -68,6 +69,7 @@ services:
       SITE_REPOSITORY: ""
     volumes: !override
       - .:/var/www
+      - storage_data:/var/www/storage
     command: sh -c "exec php src/cli/worker.php"
     restart: unless-stopped
 
@@ -99,5 +101,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  storage_data:
   caddy_data:
   caddy_config:

@@ -45,3 +45,7 @@ clover.xml
 
 # Log files.
 *.log
+
+# Uploaded files: the storage_data volume in every stack (docs/storage.md).
+/storage/*
+!/storage/.gitkeep

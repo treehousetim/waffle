@@ -102,6 +102,9 @@ services:
       # vendor/ lives in a named volume: it stays out of the bind mount so
       # installs are fast and host/container platform builds never collide.
       - vendor_data:/var/www/vendor
+      # Files the app keeps (StoragePort), outside the code so a deploy
+      # never touches them (docs/storage.md).
+      - storage_data:/var/www/storage
     depends_on:
       db:
         condition: service_healthy
@@ -121,6 +124,7 @@ services:
     volumes:
       - .:/var/www
       - vendor_data:/var/www/vendor
+      - storage_data:/var/www/storage
     depends_on:
       db:
         condition: service_healthy
@@ -153,5 +157,6 @@ services:
 
 volumes:
   vendor_data:
+  storage_data:
   caddy_data:
   caddy_config:

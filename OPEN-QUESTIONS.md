@@ -14,6 +14,7 @@ Sparse list. One line each where possible. When answered, move it to `RESOLVED_Q
 - **Waffle Iron modules at 1.0.** Short links declares `waffle >=0.1 <1.0`, so it stops matching at 1.0. Proposed: modules declare a major (`>=1.0 <2.0`), and short links is proven on 1.0 and re-released for it.
 
 ## Needs a decision before production
+- **Backing up stored files.** The `storage_data` volume (docs/storage.md: uploads, photos) is in no backup. Proposed: the nightly backup also archives the volume beside the database dump, and both go off-site together (below); or files move to object storage, which keeps its own copies.
 - **Off-site backups.** `tools/backup-prod-db.sh` keeps 14 nightly dumps on the server itself, which does not survive losing the server. Where should copies go (object storage in another region, with a key limited to one bucket)?
 - **Monitoring.** `HEARTBEAT_URL` (a dead-man's switch pinged after each `/cron/health`) is optional. Pick a service, or decide not to.
 - **The server.** Region, size and image for the one droplet; see `docs/fresh-install.md`.

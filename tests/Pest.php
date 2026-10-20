@@ -111,6 +111,11 @@ uses()->group('queue')->in(
     'Unit/WorkerServiceTest.php',
 );
 
+// Storage (docs/storage.md).
+uses()->group('storage')->in(
+    'Unit/Libraries/LocalDiskStorageTest.php',
+);
+
 // The content slice (docs/content.md).
 uses()->group('content')->in(
     'Unit/Domain/Content',

@@ -86,4 +86,12 @@ final class FakeIdentity implements IdentityPort
         $this->loggedOut = true;
         $this->authenticated = false;
     }
+
+    /** @var array<int,?Role> the levels setRole() was asked to give, by account */
+    public array $rolesSet = [];
+
+    public function setRole(int $userId, ?Role $role): void
+    {
+        $this->rolesSet[$userId] = $role;
+    }
 }

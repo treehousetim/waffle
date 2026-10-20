@@ -48,4 +48,14 @@ interface IdentityPort
     public function login(string $email, string $password): void;
 
     public function logout(): void;
+
+    /**
+     * Gives the account exactly this level, or none (an owner promoting an
+     * administrator; a membership whose level follows its status). Takes
+     * effect on the account's next request: the session is resynchronised
+     * every time.
+     *
+     * @throws \InvalidArgumentException when there is no such account
+     */
+    public function setRole(int $userId, ?Role $role): void;
 }
