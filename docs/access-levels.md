@@ -26,6 +26,8 @@ the two lower levels are listed there.
 | `content-edit` | Write and edit records the site publishes (docs/content.md) | ✓ | ✓ | |
 | `content-publish` | Publish, retire and restore records | ✓ | ✓ | |
 | `invitations-manage` | Invite people, and revoke invitations (administrators: users only; docs/invitations.md) | ✓ | ✓ | |
+| `forms-manage` | Read what the site's forms sent, and mark it handled or spam (docs/forms.md) | ✓ | ✓ | |
+| `sites-manage` | Add the sites that send forms, issue their keys, disable them | ✓ | | |
 
 Keep this table and `tests/Unit/Domain/Auth/PermissionsTest.php` saying the
 same thing; change both together.

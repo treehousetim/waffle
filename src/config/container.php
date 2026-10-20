@@ -277,4 +277,13 @@ $definitions['content.record_types'] = array_values(array_map(
     array_filter(array_keys($definitions), static fn (string $key): bool => str_starts_with($key, 'record_type:')),
 ));
 
+/*
+ * The forms a site may send (docs/forms.md): every `form:<name>`, gathered
+ * the same way.
+ */
+$definitions['forms.names'] = array_values(array_map(
+    static fn (string $key): string => substr($key, strlen('form:')),
+    array_filter(array_keys($definitions), static fn (string $key): bool => str_starts_with($key, 'form:')),
+));
+
 return $definitions;

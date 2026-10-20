@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Content\PublishStatus;
+use App\Domain\Forms\SiteStatus;
+use App\Domain\Forms\SubmissionStatus;
 use App\Domain\Invitations\InvitationStatus;
 use App\Domain\Queue\JobStatus;
 use App\Domain\Queue\RunOutcome;
@@ -34,6 +36,8 @@ it('has exactly one types row per enum case', function (string $enum, string $gr
     'job run outcomes' => [RunOutcome::class, 'job_run_outcome'],
     'publish statuses' => [PublishStatus::class, 'publish_status'],
     'invitation statuses' => [InvitationStatus::class, 'invitation_status'],
+    'site statuses' => [SiteStatus::class, 'site_status'],
+    'submission statuses' => [SubmissionStatus::class, 'submission_status'],
 ]);
 
 it('has exactly one `job` types row per registered job handler (docs/queue.md, 11)', function (): void {
@@ -48,4 +52,16 @@ it('has exactly one `job` types row per registered job handler (docs/queue.md, 1
         ->fetchAll(PDO::FETCH_COLUMN);
 
     expect($rows)->toBe($registered);
+});
+
+it('has exactly one `form` types row per declared form (docs/forms.md, 7)', function (): void {
+    /** @var array<string,mixed> $definitions */
+    $definitions = require dirname(__DIR__, 3) . '/src/config/container.php';
+    $declared = $definitions['forms.names'];
+    sort($declared);
+
+    $rows = TestCase::pdo()->query("SELECT types_name FROM types WHERE types_group = 'form' ORDER BY types_name")
+        ->fetchAll(PDO::FETCH_COLUMN);
+
+    expect($rows)->toBe($declared);
 });

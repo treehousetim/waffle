@@ -22,6 +22,7 @@ final class Permissions
             Permission::ContentEdit,
             Permission::ContentPublish,
             Permission::InvitationsManage,
+            Permission::FormsManage,
         ],
         'user' => [
             Permission::Home,

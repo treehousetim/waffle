@@ -116,6 +116,13 @@ uses()->group('storage')->in(
     'Unit/Libraries/LocalDiskStorageTest.php',
 );
 
+// Forms (docs/forms.md).
+uses()->group('forms')->in(
+    'Unit/Domain/Forms',
+    'Unit/Libraries/Forms',
+    'Feature/FormsTest.php',
+);
+
 // The invitations slice (docs/invitations.md).
 uses()->group('invitations')->in(
     'Unit/Domain/Invitations',

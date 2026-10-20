@@ -25,4 +25,6 @@ enum Permission: string
     case ContentEdit = 'content-edit';
     case ContentPublish = 'content-publish';
     case InvitationsManage = 'invitations-manage';
+    case FormsManage = 'forms-manage';
+    case SitesManage = 'sites-manage';
 }

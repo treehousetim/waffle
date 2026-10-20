@@ -50,6 +50,18 @@ export const routes = [
     meta: { title: 'Pages', permission: 'content-edit', nav: true }
   },
   {
+    path: '/inbox',
+    name: 'inbox',
+    component: () => import('@/views/InboxView.vue'),
+    meta: { title: 'Inbox', permission: 'forms-manage', nav: true }
+  },
+  {
+    path: '/sites',
+    name: 'sites',
+    component: () => import('@/views/SitesView.vue'),
+    meta: { title: 'Sites', permission: 'sites-manage', nav: true }
+  },
+  {
     path: '/invitations',
     name: 'invitations',
     component: () => import('@/views/InvitationsView.vue'),

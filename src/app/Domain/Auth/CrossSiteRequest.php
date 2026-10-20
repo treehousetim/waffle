@@ -79,7 +79,11 @@ final readonly class CrossSiteRequest
      */
     public static function isFormBody(string $method, string $path, string $contentType): bool
     {
-        if (in_array(strtoupper($method), self::SAFE, true) || !str_starts_with(rawurldecode($path), '/api/')) {
+        $path = rawurldecode($path);
+
+        // A site's forms come form-encoded from a browser without script,
+        // through the site's server with its key (docs/forms.md, 8.).
+        if (in_array(strtoupper($method), self::SAFE, true) || !str_starts_with($path, '/api/') || str_starts_with($path, '/api/site/forms/')) {
             return false;
         }
 

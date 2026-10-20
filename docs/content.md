@@ -7,8 +7,9 @@ ignore it: nothing is published unless someone publishes it.
 
 **Built so far:** publishing (the state machine, revisions, slugs), `posts`
 (Markdown) and `pages` (blocks), the site API that reads them, and change
-notices. **Still to come:** media (and with it image and gallery blocks);
-terms; sites and form submissions.
+notices; and the sites that send forms, with their submissions
+(docs/forms.md). **Still to come:** media (and with it image and gallery
+blocks); terms.
 docs/content-model.md is the design for all of it.
 
 ## How it works

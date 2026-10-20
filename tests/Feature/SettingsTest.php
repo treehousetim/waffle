@@ -26,7 +26,7 @@ it('lists every setting with what the page needs to render it', function (): voi
     $settings = $this->json($response)['data']['settings'];
 
     expect($response->getStatusCode())->toBe(200)
-        ->and(array_column($settings, 'key'))->toBe(['page_size', 'date_style', 'app_name', 'display_timezone', 'schema_owner'])
+        ->and(array_column($settings, 'key'))->toBe(['page_size', 'date_style', 'form_retention_days', 'app_name', 'display_timezone', 'schema_owner'])
         ->and(settingNamed($settings, 'date_style'))->toBe([
             'key' => 'date_style',
             'value' => 'relative',

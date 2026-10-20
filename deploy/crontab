@@ -33,6 +33,10 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # the outside service alerts when the pings stop, so a stopped worker alerts too.
 */5 * * * * curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/health >/dev/null 2>&1 && curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/queue >/dev/null 2>&1__HEARTBEAT__
 
+# Form submissions past the form_retention_days setting are deleted: they
+# are personal data (docs/forms.md).
+45 2 * * * curl -sf -H @__CRON_HEADER_FILE__ http://127.0.0.1:8081/cron/forms >/dev/null 2>&1
+
 # The nightly database dump (tools/backup-prod-db.sh keeps the newest 14). Its
 # output is kept, because "did last night's backup work" has to be answerable.
 15 3 * * * cd /opt/waffle && doppler run -- ./tools/backup-prod-db.sh >>/opt/waffle/.deploy/backup.log 2>&1

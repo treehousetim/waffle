@@ -26,6 +26,8 @@ const UNGUARDED = [
     // An invitation link: the token is the permission (docs/invitations.md).
     'GET /api/invite/{token}',
     'POST /api/invite/{token}/accept',
+    // A site's form: guarded by the site key, not a level (docs/forms.md).
+    'POST /api/site/forms/{name}',
 ];
 
 /** @return array<string,Permission> "METHOD pattern" => permission */
@@ -38,6 +40,14 @@ function guardedRoutes(): array
         'GET /api/queue' => Permission::QueueManage,
         'POST /api/queue/jobs/{id}/retry' => Permission::QueueManage,
         'DELETE /api/queue/jobs/{id}' => Permission::QueueManage,
+        'GET /api/forms/submissions' => Permission::FormsManage,
+        'POST /api/forms/submissions/{id}/handled' => Permission::FormsManage,
+        'POST /api/forms/submissions/{id}/spam' => Permission::FormsManage,
+        'GET /api/sites' => Permission::SitesManage,
+        'POST /api/sites' => Permission::SitesManage,
+        'POST /api/sites/{id}/key' => Permission::SitesManage,
+        'POST /api/sites/{id}/disable' => Permission::SitesManage,
+        'POST /api/sites/{id}/enable' => Permission::SitesManage,
         'GET /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations/{id}/revoke' => Permission::InvitationsManage,

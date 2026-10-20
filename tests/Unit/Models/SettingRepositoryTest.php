@@ -15,6 +15,7 @@ it('lists every setting by group, then by each group\'s own order', function ():
     expect(array_map(static fn ($s): string => $s->group . '/' . $s->key, $this->settings->all()))->toBe([
         'display/page_size',
         'display/date_style',
+        'forms/form_retention_days',
         'general/app_name',
         'general/display_timezone',
         'general/schema_owner',
