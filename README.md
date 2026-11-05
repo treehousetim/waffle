@@ -86,7 +86,7 @@ When it is done, replace the placeholder paragraph in AGENTS.md §1 with what yo
 | Service | What it is for | Cost |
 | --- | --- | --- |
 | [GitHub](https://github.com) | The repository, and GitHub Actions, which builds and deploys every release through a `prod` environment. | Free for public and private repos within the Actions allowance. |
-| [DigitalOcean](https://www.digitalocean.com) | The one droplet production runs on (Ubuntu LTS; 2 GB RAM is plenty to start). | From a few dollars a month. |
+| [DigitalOcean](https://www.digitalocean.com) | The one droplet production runs on (Debian 13; 2 GB RAM is plenty to start). | From a few dollars a month. |
 | [Doppler](https://www.doppler.com) | The only source of production secrets: `prod-serve`, read by the server, and `prod-deploy`, read by GitHub Actions. Not needed locally. | Free Developer plan (3 users at last check; see [doppler.com/pricing](https://www.doppler.com/pricing)). |
 | A domain registrar | The production hostname. Any registrar works; its DNS can be hosted by the registrar or by DigitalOcean for free. | A domain a year. |
 

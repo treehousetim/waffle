@@ -7,7 +7,7 @@ workplace to the app serving on its own hostname. `waffle` below is the slug
 ## Part 0 — Decide before you start
 
 - The production hostname, and where its DNS is managed.
-- The server: a single Digital Ocean droplet (Ubuntu LTS, 2 GB RAM is plenty
+- The server: a single Digital Ocean droplet (Debian 13, 2 GB RAM is plenty
   to start). IPv4 is enough. An AAAA record is only for a droplet with IPv6
   turned on: one pointing anywhere else breaks Let's Encrypt, which tries IPv6
   first (`deploy/check-dns.sh` refuses it).
@@ -82,7 +82,7 @@ Read once, by the `CreateInitialOwner` migration on the first deploy.
 
 ## Part C — The server
 
-**7. Create the droplet** (Ubuntu LTS) with your own SSH key, and point an A
+**7. Create the droplet** (Debian 13) with your own SSH key, and point an A
 record for `waffle.example.com` at it (or at a reserved IP assigned to it).
 Firewall: 22 from your addresses; 80, 443 and 443/udp from anywhere. Port 80
 stays open for good: Let's Encrypt validates over it, and Caddy redirects
@@ -91,11 +91,11 @@ everything else on it to HTTPS.
 **8. Install what the deploy needs**, as root:
 
 - Docker Engine and the Compose plugin from Docker's own apt repository
-  (https://docs.docker.com/engine/install/ubuntu/). Compose **v2.24 or later**
+  (https://docs.docker.com/engine/install/debian/). Compose **v2.24 or later**
   is required: `docker-compose.prod.yml` uses `!override`.
 - The Doppler CLI (https://docs.doppler.com/docs/install-cli).
 - `curl`, `rsync` and `bind9-dnsutils` (for `dig`, which the deploy's DNS check
-  uses) from Ubuntu's own repositories. No certbot: Caddy handles the certificate.
+  uses) from Debian's own repositories. No certbot: Caddy handles the certificate.
 
 Then the deploy user and the directories:
 

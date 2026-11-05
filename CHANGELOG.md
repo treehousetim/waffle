@@ -57,6 +57,7 @@ Found by a review of what KAW Meetup built, and fixed there first.
 - **The rename keeps the companions' names.** It renamed every "Waffle", so a project's documents talked of "KAW Meetup Site" and "KAW Meetup Iron", which do not exist. `Waffle Site`, `Waffle Iron`, `waffle-site`, `waffle-iron` and `waffle-api.md` now stay as they are (failure 20 in docs/create-project.md). Found in KAW Meetup. Porting: nothing to port into code; in a project already renamed, put those names back by hand where its documents mean the companion projects.
 
 ### Changed
+- **Production runs on Debian 13**, not Ubuntu LTS (docs/fresh-install.md, README.md). Nothing in deploy/ is distribution-specific.
 - **The Compose project is named for the slug** (`name:` in `docker-compose.yml`), so containers and volumes are the project's wherever it is cloned, not the folder's. Porting: add `name: <your slug>` at the top of `docker-compose.yml`; on a server the folder is already `/opt/<slug>`, so volume names do not change.
 
 ## [0.2.0] - 2026-10-19
