@@ -61,7 +61,7 @@ Use exactly these majors, latest patch at install time.
 | Env loading | `vlucas/phpdotenv` | ^5.7 (tests only read `.env.testing` with it; nothing else loads a file) |
 | Tests | Pest | `pestphp/pest` ^4 (brings PHPUnit 12) + `pestphp/pest-plugin-arch` ^4, dev only; `pcov` for coverage. Pest 5 / PHPUnit 13 exists; stay on 4 unless told otherwise. |
 | Database | MariaDB | 12.3 (`mariadb:12.3`) |
-| Web server | Caddy | 2.11 (`caddy:2.11`) — replaced Nginx 1.31 on 2026-10-12: it obtains and renews the Let's Encrypt certificate itself, so launching on HTTPS needs no certbot, renewal hook or hard-coded certificate path (`docs/https.md`) |
+| Web server | Caddy | 2.11.9 (`caddy:2.11.9`, an exact patch, bumped deliberately after checking Caddy's security advisories) — replaced Nginx 1.31 on 2026-10-12: it obtains and renews the Let's Encrypt certificate itself, so launching on HTTPS needs no certbot, renewal hook or hard-coded certificate path (`docs/https.md`) |
 | Frontend | Vue 3 (Composition API, `<script setup>`) | 3.5 |
 | Router / state | Vue Router 5.3, Pinia 4.0 | |
 | Build | Vite 8, `@vitejs/plugin-vue` 6.0 | |

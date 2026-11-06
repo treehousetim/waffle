@@ -13,6 +13,7 @@ Each release moves everything under `[Unreleased]` into its own section
 ## [Unreleased]
 
 ### Added
+- **The server's daily advisory check, designed** (docs/supply-chain.md, "Watching for advisories, on the server"): Caddy, PHP, MariaDB, Composer packages and Debian checked against what is running, reported once per finding, never changed by the check. Not built yet; where it reports is in OPEN-QUESTIONS.md.
 - **Sample content for development** (`ContentSeeder`, docs/content.md): a published post, a published page of blocks and a draft post, written through Publishing; refuses to run outside development. README and `tools/setup.sh` seed it with the accounts. Brought back from KAW Meetup.
 - **CI** (`.github/workflows/ci.yml`, docs/releasing.md): the gate, `./tools/test.sh --coverage`, on every push to `main` and every pull request; read-only, no secrets, actions pinned to commits (`tests/Unit/CiWorkflowTest.php` holds it to that). Porting: the workflow and its test.
 - **The content slice** (docs/content.md), the first part of the content model (docs/content-model.md), built in KAW Meetup and brought back: any record type declared as `record_type:<name>` gets drafts, a publish state machine (draft, published, retired), a revision for every publish that can be restored, and a slug history no other record may reuse. The first record type is `posts`: Markdown bodies with no raw HTML, no top-level heading and only safe links, edited on a plain Posts page. New permissions `content-edit` and `content-publish`, for administrators.
@@ -57,6 +58,7 @@ Found by a review of what KAW Meetup built, and fixed there first.
 - **The rename keeps the companions' names.** It renamed every "Waffle", so a project's documents talked of "KAW Meetup Site" and "KAW Meetup Iron", which do not exist. `Waffle Site`, `Waffle Iron`, `waffle-site`, `waffle-iron` and `waffle-api.md` now stay as they are (failure 20 in docs/create-project.md). Found in KAW Meetup. Porting: nothing to port into code; in a project already renamed, put those names back by hand where its documents mean the companion projects.
 
 ### Changed
+- **Caddy is pinned to 2.11.9**, an exact patch instead of the floating `caddy:2.11`, which builds from whatever older image a machine has cached: 2.11.8 and 2.11.9 fix the advisories published on 2026-11-04. `CaddyfileTest` holds the pin. Porting: the `image:` line in `docker-compose.yml`.
 - **Production runs on Debian 13**, not Ubuntu LTS (docs/fresh-install.md, README.md). Nothing in deploy/ is distribution-specific.
 - **The Compose project is named for the slug** (`name:` in `docker-compose.yml`), so containers and volumes are the project's wherever it is cloned, not the folder's. Porting: add `name: <your slug>` at the top of `docker-compose.yml`; on a server the folder is already `/opt/<slug>`, so volume names do not change.
 

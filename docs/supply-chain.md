@@ -144,3 +144,73 @@ scratch copy against a stand-in `docker`.
 10. Files Composer writes end up owned by root on Linux.
 11. The window is set to something that is not a number of days.
 12. It runs on a native Windows shell and half-works.
+
+# Watching for advisories, on the server
+
+**Status: designed, not built.**
+
+The week-long cooldown keeps a hijacked release out; it does nothing about a
+flaw found later in a version already running. The server checks for those
+itself, once a day, and says so when it finds one. It runs on the server
+because the server knows what is actually running, needs no outside service
+holding any of its credentials, and keeps working when nobody is looking at
+GitHub.
+
+**It reports and never changes anything.** A version is still bumped by hand,
+in the repository, with its tests, through a release: the cooldown and the
+gate apply to a security fix as to anything else, and the person deciding can
+see whether the flaw reaches this project's configuration at all.
+
+### What it checks
+
+| What | The running version, from | Compared with |
+| --- | --- | --- |
+| Caddy | `docker compose exec caddy caddy version` | the GitHub Advisory Database (`api.github.com/advisories`, Go ecosystem, `github.com/caddyserver/caddy/v2` at that version) |
+| PHP | `docker compose exec php php -r 'echo PHP_VERSION;'` | php.net's release list for the same minor: a newer patch is reported, since PHP patch releases carry the security fixes |
+| MariaDB | `docker compose exec db mariadb --version` | the newest patch of the same minor from MariaDB's downloads API |
+| Composer packages | `docker compose exec php composer audit --locked --no-dev` | Packagist's advisories, against the `composer.lock` that was deployed |
+| Debian | `/var/run/reboot-required` | security updates are installed by `unattended-upgrades` (docs/fresh-install.md); the check only reports a reboot they are waiting for |
+
+npm is not checked here: no package from npm runs on the server. The build
+audits it, on the runner, on every release.
+
+### How it reports
+
+- **Once per finding.** What has been reported is kept in `.deploy/advisories`,
+  so the same advisory is not reported every day, and a finding that goes
+  away (the version was bumped) is forgotten.
+- **To where a person looks.** The same rule as every cron job
+  (deploy/crontab): output is discarded, so the outcome has to go somewhere.
+  The channel is an open question (OPEN-QUESTIONS.md): an alert webhook in
+  `prod-serve`, the heartbeat service's failure ping, or both.
+- **A check that cannot run is itself reported**, after two days in a row, so
+  a broken check does not look like a quiet one.
+
+### Failure list
+
+1. A source is unreachable or slow: each request has a timeout; that source is
+   skipped and counted toward (7), and the others still run.
+2. A source answers something unexpected (an error page, a changed format):
+   treated as (1), never as "no advisories".
+3. A container is not running, so its version cannot be read: reported as
+   such, not skipped silently.
+4. The same advisory every day: reported once (`.deploy/advisories`).
+5. A version string the check cannot parse: reported, not compared.
+6. A rate limit from the GitHub API (60 requests an hour without a token):
+   one request per component per day stays far below it; a 403 is (1).
+7. The check has not completed for two days: reported.
+8. Nowhere to report to (no channel configured): `deploy.sh` warns on every
+   deploy, as it does for a missing `HEARTBEAT_URL`.
+9. The check must never print, store or send a secret: it reads versions
+   only, and the alert carries the component, the version and the advisory's
+   link.
+
+### To build
+
+- `deploy/check-advisories.sh`, run daily from `deploy/crontab` (outside the
+  busy hours, after the nightly backup), with its state in `.deploy/`
+- the reporting channel, once chosen, rendered into the crontab the way
+  `HEARTBEAT_URL` is
+- `unattended-upgrades` in docs/fresh-install.md
+- tests in `DeployScriptsTest` against stand-in `docker` and `curl`, one per
+  item above, written first (AGENTS.md §7)

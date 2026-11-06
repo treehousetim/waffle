@@ -157,7 +157,7 @@ it('serves /cron on its own port to this machine and its containers only (16)', 
 it('serves plain HTTP locally and never asks for a certificate (10)', function (): void {
     $caddy = composeService(composeFile('docker-compose.yml'), 'caddy');
 
-    expect($caddy)->toContain('image: caddy:2.11')
+    expect($caddy)->toContain('image: caddy:2.11.9')
         ->toContain('SITE_ADDRESS: ":80"')
         ->toContain('./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro')
         ->toContain('"${HTTP_PORT:-8080}:80"');
