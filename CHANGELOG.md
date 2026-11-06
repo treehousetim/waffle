@@ -13,6 +13,7 @@ Each release moves everything under `[Unreleased]` into its own section
 ## [Unreleased]
 
 ### Added
+- **docs/pull-based-deployments.md, a proposal**: the server pulls each release from GitHub on a timer (guards, migrate, atomic switch, health check, rollback) instead of the workflow pushing it over SSH, so `prod-deploy` and the deploy key go away and secrets stay in Doppler on the server. Not built.
 - **The server's daily advisory check, designed** (docs/supply-chain.md, "Watching for advisories, on the server"): Caddy, PHP, MariaDB, Composer packages and Debian checked against what is running, reported once per finding, never changed by the check. Not built yet; where it reports is in OPEN-QUESTIONS.md.
 - **Sample content for development** (`ContentSeeder`, docs/content.md): a published post, a published page of blocks and a draft post, written through Publishing; refuses to run outside development. README and `tools/setup.sh` seed it with the accounts. Brought back from KAW Meetup.
 - **CI** (`.github/workflows/ci.yml`, docs/releasing.md): the gate, `./tools/test.sh --coverage`, on every push to `main` and every pull request; read-only, no secrets, actions pinned to commits (`tests/Unit/CiWorkflowTest.php` holds it to that). Porting: the workflow and its test.
