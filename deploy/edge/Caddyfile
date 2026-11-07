@@ -1,7 +1,9 @@
 # The server's front Caddy (docs/edge.md). One block per hostname the server
 # serves, forwarding to the project's own Caddy by the alias it has on the
 # `edge` network (its docker-compose.prod.yml). Caddy gets each hostname's
-# certificate on its own and redirects HTTP to HTTPS.
+# certificate on its own and redirects HTTP to HTTPS. The aliases end in
+# -app or -site, never the bare slug: a server is often named for its slug,
+# and that name resolves to the server itself, so a proxy to it would loop.
 #
 # The projects' Caddyfiles carry the security headers, caching and every
 # other rule; this only routes. It trusts no forwarded address: Caddy sends
@@ -11,7 +13,8 @@
 # lb_try_duration: a deploy recreates a project's Caddy, and for those few
 # seconds a request waits for it rather than failing.
 #
-# Changing it, on the server, as root:
+# Changing it, on the server, as root (cp it into place, never install or
+# mv: docs/edge.md, "Changing it"):
 #   cd /opt/edge && docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 #   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 #
@@ -21,7 +24,7 @@
 # Site's setups 2, 2a and 4) adds its own blocks: docs/edge.md, "A site
 # beside the app".
 waffle.example.com {
-	reverse_proxy waffle:80 {
+	reverse_proxy waffle-app:80 {
 		lb_try_duration 15s
 	}
 }

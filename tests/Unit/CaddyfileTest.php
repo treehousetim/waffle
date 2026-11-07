@@ -193,10 +193,10 @@ it('trusts forwarded addresses only from private networks, and gives PHP the vis
         ->and(caddyBlock(caddyfile(), 'http://:8081'))->toContain('@outside not remote_ip ');
 });
 
-it('joins the front Caddy\'s network under the slug, and only Caddy does (docs/edge.md, 3)', function (): void {
+it('joins the front Caddy\'s network as <slug>-app, and only Caddy does (docs/edge.md, 3)', function (): void {
     $prod = composeFile('docker-compose.prod.yml');
 
-    expect(composeService($prod, 'caddy'))->toMatch('/networks:\n      default:\n      edge:\n        aliases: \[waffle\]/')
+    expect(composeService($prod, 'caddy'))->toMatch('/networks:\n      default:\n      edge:\n        aliases: \[waffle-app\]/')
         ->and($prod)->toMatch('/^networks:\n  edge:\n    external: true$/m')
         ->and(composeService($prod, 'php'))->not->toContain('edge')
         ->and(composeService($prod, 'db'))->not->toContain('edge');

@@ -11,13 +11,16 @@ HTTP and publish no public port.
 
 ```
 visitor ──HTTPS──▶ front Caddy (/opt/edge, ports 80 and 443, the certificates)
-                     ├─ waffle.example.com  ──edge network──▶ waffle:80  the app's Caddy ──▶ php
+                     ├─ waffle.example.com  ──edge network──▶ waffle-app:80  the app's Caddy ──▶ php
                      └─ a site's hostname   ──edge network──▶ the site's Caddy ──▶ files
 ```
 
 - **The `edge` network** is made by the front Caddy's Compose file. Each
   project's `docker-compose.prod.yml` puts its Caddy, and nothing else, on it
-  under an alias: the app's slug for the app.
+  under an alias: `<slug>-app` for the app, and for a site its slug with `_`
+  written `-` (`acme_site` is `acme-site`). Never the bare slug: the server
+  itself is often named for it, and that name resolves to the server, so the
+  front Caddy would proxy to itself.
 - **The visitor's address.** The front Caddy sends it in `X-Forwarded-For`,
   throwing away any the visitor sent. The projects' Caddys trust that header
   only from private networks, which nothing on the internet can reach them
@@ -81,14 +84,19 @@ deploy.
 
 A new hostname, or a new Caddy version (which the projects take at the same
 time; `tests/Unit/EdgeTest.php` checks they match): change the files here,
-then copy them to `/opt/edge` as above and, on the server:
+copy them to the server's home folder with `scp` as above, and, as root:
 
 ```bash
+cp ~/Caddyfile ~/docker-compose.yml /opt/edge/ && rm ~/Caddyfile ~/docker-compose.yml
 cd /opt/edge
 docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile   # a new hostname
 docker compose up -d                                                                        # a new image
 ```
+
+`cp`, not `install` or `mv`: Docker mounts the Caddyfile itself, and a file
+replaced rather than written into is one the running Caddy never sees (it
+keeps reading the old one until `docker compose up -d --force-recreate`).
 
 A reload drops no connection. A new image restarts the front Caddy, a second
 or two without either site.
@@ -96,7 +104,7 @@ or two without either site.
 ## Failure list
 
 Each has a test: 1 to 3 in `tests/Unit/CaddyfileTest.php` (and Waffle Site's
-`tests/infra/caddyfile.test.js`), 4 and 6 to 10 in `tests/Unit/EdgeTest.php`,
+`tests/infra/caddyfile.test.js`), 4 and 6 to 11 in `tests/Unit/EdgeTest.php`,
 5 in `tests/Unit/DeployScriptsTest.php` (and Waffle Site's
 `tests/infra/deploy.test.js`).
 
@@ -120,3 +128,6 @@ Each has a test: 1 to 3 in `tests/Unit/CaddyfileTest.php` (and Waffle Site's
 9. The cron port is reachable through the front Caddy.
 10. A visitor is served over plain HTTP: the front Caddy redirects port 80 to
     HTTPS.
+11. A project's alias on the network is a name the server already answers to
+    (a droplet named for the slug, say), and the front Caddy proxies to
+    itself instead of to the project.

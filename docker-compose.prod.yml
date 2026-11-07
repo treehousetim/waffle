@@ -105,12 +105,12 @@ services:
     volumes: !override
       - .:/var/www:ro
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-    # On the front Caddy's network under the slug, which its Caddyfile names;
+    # On the front Caddy's network as <slug>-app, which its Caddyfile names;
     # and on this project's own, for php.
     networks:
       default:
       edge:
-        aliases: [waffle]
+        aliases: [waffle-app]
     restart: unless-stopped
 
 volumes:

@@ -45,6 +45,7 @@ Found by a review of what KAW Meetup built, and fixed there first.
 - **`/api/%73ite/` was given a session**; `SessionCookie::wantedFor()` decodes the path first.
 
 ### Fixed
+- **The front Caddy names the app `<slug>-app` on the `edge` network, never the bare slug** (docs/edge.md, failure 11). A droplet named for its slug resolves that name to itself, so while the app was down the front Caddy proxied to itself and answered 308 instead of 502. And `cp` the front Caddy's files into `/opt/edge`, never `install` or `mv`: Docker mounts the Caddyfile itself. Porting: `deploy/edge/Caddyfile`, the alias in `docker-compose.prod.yml`, docs/edge.md, and recreate the front Caddy once.
 - **The session cookie is the project's own** (`waffle_session`, which `tools/rename-project.sh` makes `<slug>_session`), not PHP's `PHPSESSID`: two apps run side by side on localhost shared one cookie, since cookies ignore the port, and signed each other out. Signing in again is needed once after the change. Porting: `SessionCookie::NAME` and the `session_name()` line in `src/public/index.php`.
 - **A public image must stay described**: blanking its alt text or dropping a credit its licence needs is refused, since the change notice it sends would start a site build that fails (`MediaLibrary::describe()`).
 - **Links are https:// in printable ASCII** (`ContentText::optionalHttpsUrl()`, used for credit links): a pasted non-breaking space passed the app's check and failed the site's.
