@@ -91,6 +91,17 @@ services:
       SITE_REPOSITORY: ${SITE_REPOSITORY:-}
       SITE_DISPATCH_TOKEN: ${SITE_DISPATCH_TOKEN:-}
 
+      # Mail (docs/mail.md). No key here, so a development box sends nothing:
+      # each email is written to the worker's log instead. Production sets
+      # MAIL_FROM and APP_URL as literals and the key in Doppler.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # Mail sent to the domain (docs/mail.md): Resend's webhook secret, and
+      # a key that can read received email. Unset here, so the webhook refuses.
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      RESEND_RECEIVING_KEY: ${RESEND_RECEIVING_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-Waffle <noreply@localhost.test>}
+      APP_URL: ${APP_URL:-http://localhost:${HTTP_PORT:-8080}}
+
       # Bootstrap credentials for the very first owner account, read once by
       # the CreateInitialOwner migration. Both may be deleted from Doppler
       # after the account exists — the migration is recorded in phinxlog by

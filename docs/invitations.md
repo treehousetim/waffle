@@ -2,9 +2,8 @@
 
 How people join an app that is closed to sign-up: an owner or administrator
 invites them by email address, and the person sets a password from a
-single-use link (RESOLVED_QUESTIONS.md, "How do people join an app?"). There
-is no mailer yet, so the app shows the link once and the inviter sends it
-themselves; when there is one, the same invitation is mailed from the queue.
+single-use link (RESOLVED_QUESTIONS.md, "How do people join an app?"),
+emailed to them from the queue (docs/mail.md).
 
 Built first in KAW Meetup, where it is how organisers join, and brought
 back. An invited person holds their level from the start. An open app, where
@@ -17,9 +16,11 @@ anyone may register, uses OAuth sign-up instead (not built yet).
   from the CreateInitialOwner migration, and ownership is handed over, not
   invited.
 - **The link** is `/invite/<token>`, a random 256-bit token. The database
-  keeps only its SHA-256, so a copy of the database opens no invitation. The
-  link is shown once, when the invitation is made; lost, it is revoked and
-  sent again.
+  keeps only its SHA-256, so a copy of the database opens no invitation. It
+  goes to the invited address by email and is never shown in the app: making
+  an invitation queues the email, which holds only the invitation's id, and
+  the worker issues the link as it sends (docs/mail.md, 4.). **Send again**
+  emails a new link, and the earlier one stops working.
 - **One use, seven days.** An invitation is `pending`, then `accepted` or
   `revoked` (`App\Domain\Invitations\InvitationStatus`, the `types` group
   `invitation_status`); a pending one past its expiry opens nothing. Inviting
@@ -43,7 +44,8 @@ Opening and accepting a link needs no account: the token is the permission.
 | Route | Permission | Does |
 | --- | --- | --- |
 | `GET /api/invitations` | `invitations-manage` | every invitation, newest first |
-| `POST /api/invitations` | `invitations-manage` | `{email, level}`: the invitation, and its `token` this once |
+| `POST /api/invitations` | `invitations-manage` | `{email, level}`: the invitation, emailed |
+| `POST /api/invitations/{id}/send` | `invitations-manage` | emails a pending invitation again, with a new link |
 | `POST /api/invitations/{id}/revoke` | `invitations-manage` | |
 | `GET /api/invite/{token}` | none | the address and level a valid link is for |
 | `POST /api/invite/{token}/accept` | none | `{name, password}`: makes the account and signs in |
@@ -66,4 +68,6 @@ answer says nothing about which.
 10. Accepting leaves the person signed out, or still signed in as whoever used the browser before.
 11. Two people accept the same link at once and two accounts are made.
 12. The link can be read again after it was made.
-13. A revoked or accepted invitation is revoked (again).
+13. A revoked or accepted invitation is revoked (again), or sent again.
+14. The link is kept in the email's job, or anywhere but the email itself (docs/mail.md, 4.).
+15. An email that fails to send leaves the invitation with a link nobody was given, or the earlier link stops working.

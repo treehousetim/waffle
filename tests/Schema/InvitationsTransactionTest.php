@@ -9,6 +9,7 @@ use App\Models\InvitationRepository;
 use App\Models\TypeRepository;
 use Tests\Support\Factory;
 use Tests\Support\Fakes\FakeIdentity;
+use Tests\Support\Fakes\FakeQueue;
 use Tests\Support\Fakes\FrozenClock;
 use Tests\TestCase;
 
@@ -30,14 +31,15 @@ afterEach(function (): void {
 
 function invitationsOn(PDO $pdo, FakeIdentity $identity): Invitations
 {
-    return new Invitations(new InvitationRepository($pdo, TestCase::container()->get(TypeRepository::class)), $identity, new FrozenClock());
+    return new Invitations(new InvitationRepository($pdo, TestCase::container()->get(TypeRepository::class)), $identity, new FrozenClock(), new FakeQueue());
 }
 
 it('lets one of two people using the same link at once make an account; the other waits, then finds it used (11)', function (): void {
     $owner = Factory::createUser(Role::Owner, 'schema-invite-owner@example.test');
     $first = new FakeIdentity();
     $second = new FakeIdentity();
-    [, $token] = invitationsOn(TestCase::pdo(), $first)->invite($owner, Role::Owner, 'schema-invite-new@example.test', 'user');
+    $made = invitationsOn(TestCase::pdo(), $first)->invite($owner, Role::Owner, 'schema-invite-new@example.test', 'user');
+    [, $token] = invitationsOn(TestCase::pdo(), $first)->issueLink($made->id);
 
     $other = new PDO(
         sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $_ENV['DB_HOST'], (int) $_ENV['DB_PORT'], $_ENV['DB_NAME']),

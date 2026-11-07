@@ -205,6 +205,8 @@ the `php` service in `docker-compose.yml`. All of them are in Doppler's
 | `FIRST_USERNAME`, `FIRST_USER_PASSWORD` | first deploy only | step 6 |
 | `GITHUB_RELEASES_TOKEN` | yes | the server's read-only GitHub token (docs/accounts.md); read by the deploy, never by the app |
 | `SITE_REPOSITORY`, `SITE_DISPATCH_TOKEN` | for change notices | docs/content.md and docs/accounts.md |
-| `RESEND_API_KEY` | once mail is built | docs/accounts.md |
+| `RESEND_API_KEY` | yes | docs/accounts.md, docs/mail.md |
+| `MAIL_FROM`, `APP_URL` | `docker-compose.prod.yml`, as literals | who email is from, and where its links lead (docs/mail.md) |
+| `RESEND_WEBHOOK_SECRET`, `RESEND_RECEIVING_KEY` | for mail sent to the domain | docs/accounts.md, docs/mail.md |
 | `HEARTBEAT_URL` | no | docs/accounts.md |
 | `DEPLOY_ALERT_WEBHOOK` | no | where the server reports a failed or refused deploy (docs/accounts.md) |

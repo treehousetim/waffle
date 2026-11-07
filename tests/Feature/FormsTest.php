@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Domain\Auth\Role;
+use App\Domain\Mail\MailSettings;
+use App\Domain\Mail\SendMail;
+use App\Domain\Ports\QueuePort;
 use App\Libraries\Forms\Sites;
+use Tests\Support\Factory;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Psr7\Factory\StreamFactory;
 use Tests\TestCase;
@@ -149,4 +154,49 @@ it('deletes submissions past the retention setting every night (11)', function (
     $pruned = $this->withCronSecret()->json($this->get('/cron/forms'))['data'];
 
     expect($pruned)->toBe(['pruned' => 1, 'retention_days' => 180]);
+});
+
+/** The emails queued since the test began. @return list<SendMail> */
+function queuedMail(int $since): array
+{
+    $queue = TestCase::container()->get(QueuePort::class);
+
+    return array_values(array_filter(
+        array_map(static fn (array $queued): object => $queued['job'], array_slice($queue->enqueued, $since)),
+        static fn (object $job): bool => $job instanceof SendMail,
+    ));
+}
+
+it('emails every enabled owner and administrator, one each, a reply going to the sender (docs/mail.md, 1, 9, 10)', function (): void {
+    Factory::createUser(Role::Owner, 'owner-reads@example.test');
+    Factory::createUser(Role::Administrator, 'admin-reads@example.test');
+    Factory::createUser(Role::User, 'member-does-not@example.test');
+    $off = Factory::createUser(Role::Administrator, 'turned-off@example.test');
+    Factory::disable($off);
+    $since = count(TestCase::container()->get(QueuePort::class)->enqueued);
+
+    expect(fromSite($this, contactFields(), $this->key)->getStatusCode())->toBe(200);
+
+    $mail = queuedMail($since);
+    $to = array_merge(...array_map(static fn (SendMail $job): array => $job->message->to, $mail));
+
+    expect($to)->toContain('owner-reads@example.test')
+        ->toContain('admin-reads@example.test')
+        ->not->toContain('member-does-not@example.test')
+        ->not->toContain('turned-off@example.test')
+        ->not->toContain('ada@example.test')
+        ->and(array_map(static fn (SendMail $job): int => count($job->message->to), $mail))->each->toBe(1)
+        ->and($mail[0]->message->replyTo)->toBe('ada@example.test')
+        ->and($mail[0]->message->text)->toContain('Hello.')
+        ->and($mail[0]->message->text)->toContain(TestCase::container()->get(MailSettings::class)->link('/inbox'));
+});
+
+it('emails nobody about a bot\'s submission, or one it refused (docs/mail.md, 9)', function (): void {
+    Factory::createUser(Role::Owner, 'owner-bots@example.test');
+    $since = count(TestCase::container()->get(QueuePort::class)->enqueued);
+
+    fromSite($this, contactFields(['company_website' => 'https://spam.example']), $this->key);
+    fromSite($this, contactFields(['email' => 'nope']), $this->key);
+
+    expect(queuedMail($since))->toBe([]);
 });

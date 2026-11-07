@@ -30,6 +30,8 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/queue.md](docs/queue.md) | Anything that must not run inside a request, or adding a job | The queue: `QueuePort`, MariaDB-backed jobs, the `worker` service, coalescing, retries, failed jobs on the Queue page, the cron check, and its failure list. |
 | [docs/forms.md](docs/forms.md) | A form on the site, or the inbox | Sites and their keys, receiving a submission, the honeypot and rate limit, the inbox and retention, declaring a form, the failure list. |
 | [docs/invitations.md](docs/invitations.md) | Letting someone into the app | Invitations: who may invite whom, the single-use link, accepting, and the failure list. |
+| [docs/mail.md](docs/mail.md) | Sending email, or email is not arriving | What the app emails and when, the provider (Resend by default; another behind `MailPort`), the queue, the no-key fallback, mail sent to the domain, its failure list. |
+| [docs/password-reset.md](docs/password-reset.md) | Someone forgot their password | The emailed link: one use, one hour, the newest only; its failure list. |
 | [docs/storage.md](docs/storage.md) | Keeping uploaded files | `StoragePort`, the local-disk adapter and its volume, object storage later, backups, the failure list. |
 | [docs/content.md](docs/content.md) | Publishing to a site, or adding a record type | The content slice as built: record types, publishing, revisions, slugs, posts, the site API, change notices, and the failure list. |
 | [docs/content-model.md](docs/content-model.md) | Designing what a site publishes | The decided design for all of it: publishable columns, slug history, terms, media, form submissions, sites; and the site API they serve. Partly built (docs/content.md). |

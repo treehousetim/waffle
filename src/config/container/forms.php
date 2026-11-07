@@ -17,6 +17,8 @@ use App\Domain\Forms\FormDefinition;
 use App\Domain\Forms\FormDefinitions;
 use App\Domain\Ports\ClockPort;
 use App\Domain\Ports\IdentityPort;
+use App\Domain\Mail\MailSettings;
+use App\Domain\Ports\QueuePort;
 use App\Domain\Ports\StoragePort;
 use App\Libraries\Forms\Reception;
 use App\Libraries\Forms\Sites;
@@ -26,6 +28,7 @@ use App\Models\Forms\SiteRepository;
 use App\Models\Forms\SubmissionRepository;
 use App\Models\SettingRepository;
 use App\Models\TypeRepository;
+use App\Models\UserRepository;
 use Psr\Container\ContainerInterface;
 
 use function DI\factory;
@@ -52,6 +55,9 @@ return [
         $c->get(SubmissionRepository::class),
         $c->get(ClockPort::class),
         $c->get(StoragePort::class),
+        $c->get(UserRepository::class),
+        $c->get(QueuePort::class),
+        $c->get(MailSettings::class),
     )),
     Sites::class => factory(static fn (ContainerInterface $c): Sites => new Sites($c->get(SiteRepository::class), $c->get(ClockPort::class))),
 

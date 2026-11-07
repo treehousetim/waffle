@@ -19,7 +19,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Inviting people (docs/invitations.md), behind `invitations-manage` (7.):
- * the list, a new invitation with its link's token this once, revoking.
+ * the list, a new invitation (its link goes by email), sending one again, revoking.
  */
 final class InvitationController extends BaseController
 {
@@ -51,12 +51,30 @@ final class InvitationController extends BaseController
         $body = $this->body($request);
 
         try {
-            [$invitation, $token] = $this->invitations->invite((int) $this->identity->id(), $this->identity->role(), $body['email'] ?? null, $body['level'] ?? null);
+            $invitation = $this->invitations->invite((int) $this->identity->id(), $this->identity->role(), $body['email'] ?? null, $body['level'] ?? null);
         } catch (InvalidInvitation $e) {
             return $this->jsonError($response, $e->getMessage(), 422);
         }
 
-        return $this->jsonSuccess($response, ['invitation' => $invitation->toArray($this->now()), 'token' => $token], 201);
+        // The link goes by email only (docs/mail.md, 4.).
+        return $this->jsonSuccess($response, ['invitation' => $invitation->toArray($this->now()), 'emailed' => true], 201);
+    }
+
+    public function send(ServerRequestInterface $request, ResponseInterface $response, string $id): ResponseInterface
+    {
+        $number = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        try {
+            $invitation = $this->invitations->sendAgain($number === false ? 0 : $number, $this->identity->role());
+        } catch (InvitationNotFound $e) {
+            return $this->jsonError($response, $e->getMessage(), 404);
+        } catch (InvalidInvitation $e) {
+            return $this->jsonError($response, $e->getMessage(), 403);
+        } catch (IllegalTransition) {
+            return $this->jsonError($response, 'Only an invitation that is still waiting can be sent again.', 409);
+        }
+
+        return $this->jsonSuccess($response, ['invitation' => $invitation->toArray($this->now()), 'emailed' => true]);
     }
 
     public function revoke(ServerRequestInterface $request, ResponseInterface $response, string $id): ResponseInterface

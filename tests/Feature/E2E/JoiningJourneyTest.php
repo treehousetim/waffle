@@ -33,7 +33,8 @@ it('takes a visitor from the contact form to a signed-in account, and records wh
     $this->asOwner();
     $inbox = $this->json($this->get('/api/forms/submissions'))['data']['submissions'];
     $email = $inbox[0]['fields']['email'] ?? null;
-    $token = $this->json($this->post('/api/invitations', ['email' => $email, 'level' => 'user']))['data']['token'];
+    $this->post('/api/invitations', ['email' => $email, 'level' => 'user']);
+    $token = \Tests\Support\InvitationLinks::sentTo((string) $email);
     $this->post("/api/forms/submissions/{$inbox[0]['id']}/handled");
     $this->post('/api/auth/logout');
 

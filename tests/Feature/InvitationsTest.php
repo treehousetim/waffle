@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Auth\Role;
 use Tests\Support\Factory;
+use Tests\Support\InvitationLinks;
 
 /*
  * Invitations through the router, with the real Delight\Auth
@@ -16,7 +17,7 @@ it('lets an owner invite an administrator, who joins and is signed in at that le
     $this->asOwner();
 
     $made = $this->post('/api/invitations', ['email' => 'co-organiser@example.test', 'level' => 'administrator']);
-    $token = $this->json($made)['data']['token'];
+    $token = InvitationLinks::sentTo('co-organiser@example.test');
 
     $this->post('/api/auth/logout');
     $opened = $this->get("/api/invite/{$token}");
@@ -33,7 +34,8 @@ it('lets an owner invite an administrator, who joins and is signed in at that le
 
 it('signs out whoever the browser belonged to before signing the new person in (10)', function (): void {
     $this->asOwner();
-    $token = $this->json($this->post('/api/invitations', ['email' => 'next@example.test', 'level' => 'user']))['data']['token'];
+    $this->post('/api/invitations', ['email' => 'next@example.test', 'level' => 'user']);
+    $token = InvitationLinks::sentTo('next@example.test');
 
     $this->post("/api/invite/{$token}/accept", ['name' => 'Next Person', 'password' => 'correct horse battery']);
 
@@ -58,6 +60,7 @@ it('revokes an invitation, after which its link is not valid (2, 13)', function 
     $this->asOwner();
     $made = $this->json($this->post('/api/invitations', ['email' => 'gone@example.test', 'level' => 'user']))['data'];
     $id = $made['invitation']['id'];
+    $token = InvitationLinks::sentTo('gone@example.test');
 
     $revoked = $this->post("/api/invitations/{$id}/revoke");
     $again = $this->post("/api/invitations/{$id}/revoke");
@@ -66,7 +69,8 @@ it('revokes an invitation, after which its link is not valid (2, 13)', function 
         ->and($again->getStatusCode())->toBe(409)
         ->and($this->post('/api/invitations/999999/revoke')->getStatusCode())->toBe(404)
         ->and($this->post('/api/invitations/abc/revoke')->getStatusCode())->toBe(404)
-        ->and($this->get("/api/invite/{$made['token']}")->getStatusCode())->toBe(404);
+        ->and($made)->not->toHaveKey('token')
+        ->and($this->get("/api/invite/{$token}")->getStatusCode())->toBe(404);
 });
 
 it('refuses an administrator revoking an administrator\'s invitation with 403 (4)', function (): void {
@@ -91,7 +95,8 @@ it('answers every unusable link the same way (8)', function (): void {
 it('refuses a weak password, or an address that has an account (5, 9)', function (): void {
     $this->asOwner();
     Factory::createUser(Role::User, 'exists@example.test');
-    $token = $this->json($this->post('/api/invitations', ['email' => 'weak@example.test', 'level' => 'user']))['data']['token'];
+    $this->post('/api/invitations', ['email' => 'weak@example.test', 'level' => 'user']);
+    $token = InvitationLinks::sentTo('weak@example.test');
 
     $weak = $this->post("/api/invite/{$token}/accept", ['name' => 'Weak', 'password' => 'short']);
     $taken = $this->post('/api/invitations', ['email' => 'exists@example.test', 'level' => 'user']);
@@ -100,4 +105,32 @@ it('refuses a weak password, or an address that has an account (5, 9)', function
         ->and($this->json($weak)['error'])->toBe('Choose a password of at least 12 characters.')
         ->and($taken->getStatusCode())->toBe(422)
         ->and($this->json($taken)['error'])->toBe('That address already has an account.');
+});
+
+it('emails the invitation instead of showing its link, and sends a pending one again on request (docs/mail.md, 4)', function (): void {
+    $this->asOwner();
+    $made = $this->post('/api/invitations', ['email' => 'emailed@example.test', 'level' => 'user']);
+    $id = $this->json($made)['data']['invitation']['id'];
+    $first = InvitationLinks::sentTo('emailed@example.test');
+
+    $again = $this->post("/api/invitations/{$id}/send");
+    $second = InvitationLinks::sentTo('emailed@example.test');
+    $this->post("/api/invitations/{$id}/revoke");
+
+    expect($made->getStatusCode())->toBe(201)
+        ->and($this->json($made)['data'])->not->toHaveKey('token')
+        ->and($this->json($made)['data']['emailed'])->toBeTrue()
+        ->and($again->getStatusCode())->toBe(200)
+        ->and($second)->not->toBe($first)
+        ->and($this->get("/api/invite/{$first}")->getStatusCode())->toBe(404)
+        ->and($this->post("/api/invitations/{$id}/send")->getStatusCode())->toBe(409)
+        ->and($this->post('/api/invitations/999999/send')->getStatusCode())->toBe(404);
+});
+
+it('refuses an administrator sending an administrator\'s invitation again with 403 (4)', function (): void {
+    $this->asOwner();
+    $id = $this->json($this->post('/api/invitations', ['email' => 'resend-admin@example.test', 'level' => 'administrator']))['data']['invitation']['id'];
+    $this->asAdministrator();
+
+    expect($this->post("/api/invitations/{$id}/send")->getStatusCode())->toBe(403);
 });

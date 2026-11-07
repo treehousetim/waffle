@@ -128,6 +128,21 @@ uses()->group('forms')->in(
     'Schema/FormsTransactionTest.php',
 );
 
+// The passwords slice: reset by an emailed link (docs/password-reset.md).
+uses()->group('passwords')->in(
+    'Unit/Libraries/Auth/PasswordResetsTest.php',
+    'Feature/PasswordResetTest.php',
+    'Schema/PasswordResetTransactionTest.php',
+);
+
+// The mail slice (docs/mail.md).
+uses()->group('mail')->in(
+    'Unit/Domain/Mail',
+    'Unit/Libraries/Mail',
+    'Feature/InboundMailTest.php',
+    'Schema/InboundTransactionTest.php',
+);
+
 // The invitations slice (docs/invitations.md).
 uses()->group('invitations')->in(
     'Unit/Domain/Invitations',

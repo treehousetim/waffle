@@ -36,6 +36,12 @@ final readonly class InvitationRepository
         return (int) $this->pdo->lastInsertId();
     }
 
+    /** A new link for the invitation: only its hash is ever stored (docs/invitations.md, 3.). */
+    public function setTokenHash(int $id, string $hash): void
+    {
+        $this->pdo->prepare('UPDATE invitations SET invitations_token_hash = ? WHERE invitations_id = ?')->execute([$hash, $id]);
+    }
+
     public function find(int $id, bool $forUpdate = false): ?Invitation
     {
         return $this->one(' WHERE invitations_id = ?', [$id], $forUpdate);

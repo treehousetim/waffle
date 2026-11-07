@@ -13,7 +13,7 @@ final readonly class Submission
     public function __construct(
         public int $id,
         public string $form,
-        public int $siteId,
+        public ?int $siteId,
         public array $payload,
         public SubmissionStatus $status,
         public string $createdAt,

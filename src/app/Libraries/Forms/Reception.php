@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace App\Libraries\Forms;
 
+use App\Domain\Auth\Permission;
+use App\Domain\Auth\Permissions;
+use App\Domain\Auth\Role;
 use App\Domain\Forms\FormDefinitions;
 use App\Domain\Forms\InvalidForm;
+use App\Domain\Forms\SubmissionNotice;
 use App\Domain\Forms\Visitor;
+use App\Domain\Mail\MailSettings;
+use App\Domain\Mail\SendMail;
 use App\Domain\Ports\ClockPort;
+use App\Domain\Ports\QueuePort;
 use App\Domain\Ports\StoragePort;
 use App\Models\Forms\Site;
 use App\Models\Forms\SubmissionRepository;
+use App\Models\UserRepository;
 
 /**
  * Receiving a submission from a site (docs/forms.md, "How a submission is
@@ -34,6 +42,9 @@ final readonly class Reception
         private SubmissionRepository $submissions,
         private ClockPort $clock,
         private StoragePort $storage,
+        private UserRepository $users,
+        private QueuePort $queue,
+        private MailSettings $mail,
     ) {
     }
 
@@ -46,7 +57,12 @@ final readonly class Reception
      */
     public function receive(Site $site, string $name, array $input, string $address): string
     {
-        $form = $this->forms->find($name) ?? throw new FormsNotFound('There is no form called that.');
+        $form = $this->forms->find($name);
+
+        // A form the app files itself (Email) is not one a site may send (docs/mail.md, 15.).
+        if ($form === null || !$form->fromSites) {
+            throw new FormsNotFound('There is no form called that.');
+        }
         $now = $this->clock->now();
 
         // 3. A bot learns nothing: the same answer, and nothing kept.
@@ -60,7 +76,20 @@ final readonly class Reception
             throw new TooManySubmissions('Too many tries. Please wait a few minutes and send it again.');
         }
 
-        $this->submissions->insert($form->name, $site->id, $form->fields->parse($input), $visitor, $now);
+        $fields = $form->fields->parse($input);
+        $readers = $this->users->addressesWithAnyRole(array_values(array_filter(
+            Role::cases(),
+            static fn (Role $role): bool => in_array(Permission::FormsManage, Permissions::for($role), true),
+        )));
+
+        // The submission and its emails together, or neither (docs/mail.md, 2.).
+        $this->submissions->transactional(function () use ($form, $site, $fields, $visitor, $now, $readers): void {
+            $this->submissions->insert($form->name, $site->id, $fields, $visitor, $now);
+
+            foreach (SubmissionNotice::messages($site->name, $form->label, $fields, $readers, $this->mail) as $message) {
+                $this->queue->enqueue(SendMail::of($message));
+            }
+        });
 
         return $form->thanks;
     }

@@ -14,6 +14,9 @@ use App\Libraries\Forms\Sites;
 use App\Libraries\Forms\TooManySubmissions;
 use App\Models\Forms\SiteRepository;
 use App\Models\Forms\SubmissionRepository;
+use App\Models\UserRepository;
+use App\Domain\Mail\MailSettings;
+use Tests\Support\Fakes\FakeQueue;
 use Tests\Support\Fakes\FakeStorage;
 use Tests\Support\Fakes\FrozenClock;
 use Tests\TestCase;
@@ -25,7 +28,16 @@ beforeEach(function (): void {
     $this->submissions = TestCase::container()->get(SubmissionRepository::class);
     $this->sites = new Sites(TestCase::container()->get(SiteRepository::class), $this->clock);
     $this->storage = new FakeStorage();
-    $this->reception = new Reception(new FormDefinitions(new FormDefinition('contact', 'Contact', 'Thanks!', new ContactForm())), $this->submissions, $this->clock, $this->storage);
+    $this->queue = new FakeQueue();
+    $this->reception = new Reception(
+        new FormDefinitions(new FormDefinition('contact', 'Contact', 'Thanks!', new ContactForm())),
+        $this->submissions,
+        $this->clock,
+        $this->storage,
+        TestCase::container()->get(UserRepository::class),
+        $this->queue,
+        TestCase::container()->get(MailSettings::class),
+    );
     [$this->site] = $this->sites->issueKey($this->sites->create('reception-site', 'Reception', 'https://reception.example')->id);
 });
 

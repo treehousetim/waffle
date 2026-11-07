@@ -77,6 +77,18 @@ $definitions = [
             'repository' => $str('SITE_REPOSITORY', ''),
             'dispatch_token' => $str('SITE_DISPATCH_TOKEN', ''),
         ],
+        // Mail (docs/mail.md): the Resend key (Doppler), who email is from,
+        // and the app's own address for links (docker-compose.prod.yml).
+        'mail' => [
+            'resend_key' => $str('RESEND_API_KEY', ''),
+            'from' => $str('MAIL_FROM', 'Waffle <noreply@localhost.test>'),
+            'app_url' => $str('APP_URL', 'http://localhost:8080'),
+            'app_name' => 'Waffle',
+            // Mail sent to the domain: the webhook's signing secret, and a
+            // key that can read received email (both Doppler).
+            'webhook_secret' => $str('RESEND_WEBHOOK_SECRET', ''),
+            'receiving_key' => $str('RESEND_RECEIVING_KEY', ''),
+        ],
         'paths' => [
             'root' => $root,
             'public' => $root . '/src/public',

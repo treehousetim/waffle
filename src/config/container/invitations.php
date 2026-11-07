@@ -9,8 +9,12 @@ declare(strict_types=1);
 use App\Controllers\InvitationController;
 use App\Controllers\InviteController;
 use App\Domain\Ports\ClockPort;
+use App\Domain\Mail\MailSettings;
 use App\Domain\Ports\IdentityPort;
+use App\Domain\Ports\MailPort;
+use App\Domain\Ports\QueuePort;
 use App\Libraries\Http\JsonResponder;
+use App\Libraries\Invitations\InvitationMailHandler;
 use App\Libraries\Invitations\Invitations;
 use App\Models\InvitationRepository;
 use App\Models\TypeRepository;
@@ -27,6 +31,14 @@ return [
         $c->get(InvitationRepository::class),
         $c->get(IdentityPort::class),
         $c->get(ClockPort::class),
+        $c->get(QueuePort::class),
+    )),
+
+    // The email that carries an invitation's link (docs/mail.md).
+    'job:invitation-mail' => factory(static fn (ContainerInterface $c): InvitationMailHandler => new InvitationMailHandler(
+        $c->get(Invitations::class),
+        $c->get(MailPort::class),
+        $c->get(MailSettings::class),
     )),
 
     InvitationController::class => factory(static fn (ContainerInterface $c): InvitationController => new InvitationController(

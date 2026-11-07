@@ -22,6 +22,7 @@ return static function (App $app, ContainerInterface $container): void {
         $invitations->get('', [InvitationController::class, 'index'])->add($can(Permission::InvitationsManage));
         $invitations->post('', [InvitationController::class, 'create'])->add($can(Permission::InvitationsManage));
         $invitations->post('/{id}/revoke', [InvitationController::class, 'revoke'])->add($can(Permission::InvitationsManage));
+        $invitations->post('/{id}/send', [InvitationController::class, 'send'])->add($can(Permission::InvitationsManage));
     })->add(AuthMiddleware::class);
 
     // The link itself: no account, the token is the permission.

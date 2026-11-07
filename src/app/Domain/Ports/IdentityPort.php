@@ -67,4 +67,11 @@ interface IdentityPort
      * @throws \InvalidArgumentException when the address or password is not usable
      */
     public function createAccount(string $email, string $password, string $name): int;
+
+    /**
+     * Sets an account's password (docs/password-reset.md). Signs nobody in.
+     *
+     * @throws \InvalidArgumentException when there is no such account, or the password cannot be used
+     */
+    public function changePassword(int $userId, string $password): void;
 }

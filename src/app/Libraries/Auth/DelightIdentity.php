@@ -133,6 +133,15 @@ final readonly class DelightIdentity implements IdentityPort
         }
     }
 
+    public function changePassword(int $userId, string $password): void
+    {
+        try {
+            $this->auth->admin()->changePasswordForUserById($userId, $password);
+        } catch (UnknownIdException | InvalidPasswordException $e) {
+            throw new InvalidArgumentException('That account or password cannot be used.', 0, $e);
+        }
+    }
+
     public function createAccount(string $email, string $password, string $name): int
     {
         try {

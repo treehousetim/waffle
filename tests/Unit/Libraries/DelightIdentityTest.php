@@ -171,3 +171,14 @@ it('makes a verified account with no level, and refuses a taken or unusable addr
 
     expect($this->identity->id())->toBe($id);
 });
+
+it('changes an account\'s password, and refuses an account that does not exist (docs/password-reset.md)', function (): void {
+    $id = Factory::createUser(Role::User, 'changing@example.test');
+
+    $this->identity->changePassword($id, 'a newly chosen passphrase');
+    $this->identity->login('changing@example.test', 'a newly chosen passphrase');
+
+    expect($this->identity->id())->toBe($id)
+        ->and(fn () => $this->identity->changePassword(999999, 'a newly chosen passphrase'))
+        ->toThrow(InvalidArgumentException::class, 'That account or password cannot be used.');
+});

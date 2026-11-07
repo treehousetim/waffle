@@ -39,6 +39,40 @@ final readonly class UserRepository
     }
 
     /**
+     * The id of the enabled, verified account with this address, if there is
+     * one (docs/password-reset.md, 5.).
+     */
+    public function usableIdByEmail(string $email): ?int
+    {
+        $statement = $this->pdo->prepare('SELECT id FROM users WHERE email = ? AND status = ? AND verified = 1');
+        $statement->execute([$email, self::STATUS_NORMAL]);
+        $id = $statement->fetchColumn();
+
+        return $id === false ? null : (int) $id;
+    }
+
+    /**
+     * The addresses of every enabled, verified account holding any of these
+     * levels, oldest first: who to tell about something only they may see
+     * (docs/mail.md, 9.).
+     *
+     * @param list<\App\Domain\Auth\Role> $roles
+     *
+     * @return list<string>
+     */
+    public function addressesWithAnyRole(array $roles): array
+    {
+        $mask = array_reduce($roles, static fn (int $carry, \App\Domain\Auth\Role $role): int => $carry | $role->mask(), 0);
+        $statement = $this->pdo->prepare('SELECT email FROM users WHERE status = ? AND verified = 1 AND (roles_mask & ?) <> 0 ORDER BY id');
+        $statement->execute([self::STATUS_NORMAL, $mask]);
+
+        /** @var list<string> $addresses */
+        $addresses = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+        return $addresses;
+    }
+
+    /**
      * Whether the account may be used. A missing account is not enabled.
      *
      * Any status but normal counts as turned off: Delight's own vocabulary has

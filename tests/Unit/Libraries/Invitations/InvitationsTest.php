@@ -11,7 +11,9 @@ use App\Libraries\Invitations\Invitations;
 use App\Models\InvitationRepository;
 use Tests\Support\Factory;
 use Tests\Support\Fakes\FakeIdentity;
+use Tests\Support\Fakes\FakeQueue;
 use Tests\Support\Fakes\FrozenClock;
+use App\Domain\Invitations\InvitationMail;
 use Tests\TestCase;
 
 /*
@@ -24,26 +26,71 @@ beforeEach(function (): void {
     $this->clock = new FrozenClock();
     $this->identity = new FakeIdentity();
     $this->repository = TestCase::container()->get(InvitationRepository::class);
-    $this->invitations = new Invitations($this->repository, $this->identity, $this->clock);
+    $this->queue = new FakeQueue();
+    $this->invitations = new Invitations($this->repository, $this->identity, $this->clock, $this->queue);
     $this->owner = Factory::createUser(Role::Owner);
 });
 
+/** An invitation and a link for it, as the email would carry (docs/mail.md). */
 function inviteSomeone(object $test, string $email = 'new@example.test', Role $level = Role::User): array
 {
-    return $test->invitations->invite($test->owner, Role::Owner, $email, $level->value);
+    $invitation = $test->invitations->invite($test->owner, Role::Owner, $email, $level->value);
+
+    return $test->invitations->issueLink($invitation->id);
 }
 
-it('makes an invitation with a link token shown once, stored only as its hash (3, 12)', function (): void {
-    [$invitation, $token] = inviteSomeone($this, ' New@Example.TEST ', Role::Administrator);
+it('makes an invitation and queues its email holding only its id; a link issued is stored only as its hash (3, 12; mail 4)', function (): void {
+    $made = $this->invitations->invite($this->owner, Role::Owner, ' New@Example.TEST ', 'administrator');
+    [$invitation, $token] = $this->invitations->issueLink($made->id);
 
     $stored = TestCase::pdo()->query("SELECT invitations_token_hash FROM invitations WHERE invitations_id = {$invitation->id}")->fetchColumn();
+    $job = $this->queue->enqueued[0]['job'];
 
     expect($invitation->email)->toBe('new@example.test')
         ->and($invitation->role)->toBe(Role::Administrator)
         ->and($invitation->status)->toBe(InvitationStatus::Pending)
         ->and($invitation->expiresAt)->toBe('2026-01-08 12:00:00')
         ->and($stored)->toBe(hash('sha256', $token))
-        ->and($invitation->toArray('2026-01-01 12:00:00'))->not->toHaveKey('token');
+        ->and($invitation->toArray('2026-01-01 12:00:00'))->not->toHaveKey('token')
+        ->and($this->queue->enqueued)->toHaveCount(1)
+        ->and($job)->toBeInstanceOf(InvitationMail::class)
+        ->and($job->payload())->toBe(['invitation_id' => $made->id]);
+});
+
+it('issues a new link each time, so only the newest one opens the invitation (mail 4)', function (): void {
+    $made = $this->invitations->invite($this->owner, Role::Owner, 'twice@example.test', 'user');
+    [, $first] = $this->invitations->issueLink($made->id);
+    [, $second] = $this->invitations->issueLink($made->id);
+
+    expect(fn () => $this->invitations->open($first))->toThrow(InvitationNotFound::class)
+        ->and($this->invitations->open($second)->email)->toBe('twice@example.test');
+});
+
+it('issues no link for an invitation that cannot be used (2)', function (): void {
+    [$revoked] = inviteSomeone($this, 'revoked@example.test');
+    $this->invitations->revoke($revoked->id, Role::Owner);
+    [$late] = inviteSomeone($this, 'late-link@example.test');
+    $this->clock->advance('+8 days');
+
+    expect(fn () => $this->invitations->issueLink($revoked->id))->toThrow(InvitationNotFound::class)
+        ->and(fn () => $this->invitations->issueLink($late->id))->toThrow(InvitationNotFound::class)
+        ->and(fn () => $this->invitations->issueLink(999999))->toThrow(InvitationNotFound::class);
+});
+
+it('sends a pending invitation again, at a level the sender could invite at, and nothing else (4, 13)', function (): void {
+    [$user] = inviteSomeone($this, 'again@example.test');
+    [$admin] = inviteSomeone($this, 'again-admin@example.test', Role::Administrator);
+    $before = count($this->queue->enqueued);
+
+    $sent = $this->invitations->sendAgain($user->id, Role::Administrator);
+    $this->invitations->revoke($user->id, Role::Owner);
+
+    expect($sent->id)->toBe($user->id)
+        ->and($this->queue->enqueued)->toHaveCount($before + 1)
+        ->and($this->queue->enqueued[$before]['job']->payload())->toBe(['invitation_id' => $user->id])
+        ->and(fn () => $this->invitations->sendAgain($admin->id, Role::Administrator))->toThrow(InvalidInvitation::class)
+        ->and(fn () => $this->invitations->sendAgain($user->id, Role::Owner))->toThrow(IllegalTransition::class)
+        ->and(fn () => $this->invitations->sendAgain(999999, Role::Owner))->toThrow(InvitationNotFound::class);
 });
 
 it('refuses an address that is not one, a level the inviter may not give, or an existing account (4, 5)', function (): void {

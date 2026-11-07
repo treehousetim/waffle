@@ -47,6 +47,11 @@ someone with `forms-manage`. Submissions are personal data: the setting
 `form_retention_days` (default 180) says how long they are kept, and
 `/cron/forms` deletes older ones nightly.
 
+Each submission also emails everyone who may read the Inbox (every enabled
+owner and administrator), one email each, with `Reply-To` set to the sender's
+address when the form has one, so a reply goes straight to them; nothing is
+ever sent to the sender (docs/mail.md).
+
 ## Declaring a form
 
 A migration inserting its `types` row in the group `form`, and a

@@ -43,6 +43,10 @@ for file in $changed; do
             groups="$groups storage" ;;
         src/app/Domain/Forms/*|src/app/Libraries/Forms/*|src/app/Models/Forms/*|tests/Unit/Domain/Forms/*|tests/Unit/Libraries/Forms/*|tests/Feature/FormsTest.php|tests/Schema/FormsTransactionTest.php)
             groups="$groups forms" ;;
+        src/app/Libraries/Auth/PasswordReset*|src/app/Models/PasswordReset*|src/app/Domain/Auth/PasswordReset*|tests/Unit/Libraries/Auth/*|tests/Feature/PasswordResetTest.php|tests/Schema/PasswordResetTransactionTest.php)
+            groups="$groups passwords" ;;
+        src/app/Domain/Mail/*|src/app/Libraries/Mail/*|src/app/Libraries/Clients/ResendMailer.php|tests/Unit/Domain/Mail/*)
+            groups="$groups mail" ;;
         src/app/Domain/Invitations/*|src/app/Libraries/Invitations/*|src/app/Models/Invitation*|tests/Unit/Domain/Invitations/*|tests/Unit/Libraries/Invitations/*|tests/Feature/InvitationsTest.php|tests/Schema/InvitationsTransactionTest.php)
             groups="$groups invitations" ;;
         src/app/Domain/Content/*|src/app/Libraries/Content/*|src/app/Models/Content/*|tests/Unit/Domain/Content/*|tests/Unit/Libraries/Content/*|tests/Feature/ContentTest.php|tests/Feature/SiteContentTest.php|tests/Feature/PagesTest.php|tests/Feature/MediaTest.php|tests/Unit/Libraries/GdImagesTest.php|src/app/Libraries/Images/*|tests/Schema/ContentTransactionTest.php)

@@ -43,6 +43,10 @@ services:
       # The site's repository (owner/name), where change notices go
       # (docs/content.md); its token is in Doppler. Empty: no site.
       SITE_REPOSITORY: ""
+      # Who email is from, and where its links lead (docs/mail.md); the
+      # Resend key is in Doppler. MAIL_FROM's domain must be verified there.
+      MAIL_FROM: Waffle <noreply@waffle.example.com>
+      APP_URL: https://waffle.example.com
 
     # !override REPLACES the base file's volume list.
     #
@@ -76,6 +80,10 @@ services:
       # The site's repository (owner/name), where change notices go
       # (docs/content.md); its token is in Doppler. Empty: no site.
       SITE_REPOSITORY: ""
+      # Who email is from, and where its links lead (docs/mail.md); the
+      # Resend key is in Doppler. MAIL_FROM's domain must be verified there.
+      MAIL_FROM: Waffle <noreply@waffle.example.com>
+      APP_URL: https://waffle.example.com
     volumes: !override
       # Read-only: nothing running in the container may change the release,
       # whose files the host runs too (the backup, a rollback). The app

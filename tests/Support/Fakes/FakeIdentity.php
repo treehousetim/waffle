@@ -98,6 +98,14 @@ final class FakeIdentity implements IdentityPort
     /** @var array<string,array{password:string,name:string}> accounts createAccount() made, by address */
     public array $accountsCreated = [];
 
+    /** @var array<int,string> account id => the password it was given */
+    public array $passwordsChanged = [];
+
+    public function changePassword(int $userId, string $password): void
+    {
+        $this->passwordsChanged[$userId] = $password;
+    }
+
     /** @var list<string> addresses createAccount() finds already taken */
     public array $existingAccounts = [];
 

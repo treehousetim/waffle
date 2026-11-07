@@ -51,6 +51,8 @@ async function submit() {
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
       <button type="submit" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
+
+      <p><RouterLink :to="{ name: 'forgot-password' }">Forgot your password?</RouterLink></p>
     </form>
   </main>
 </template>

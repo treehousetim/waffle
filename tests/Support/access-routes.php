@@ -30,6 +30,10 @@ const UNGUARDED = [
     'POST /api/invite/{token}/accept',
     // A site's form: guarded by the site key, not a level (docs/forms.md).
     'POST /api/site/forms/{name}',
+    // Password reset: the emailed link is the permission (docs/password-reset.md).
+    'POST /api/auth/password/forgot',
+    'GET /api/password-reset/{token}',
+    'POST /api/password-reset/{token}',
 ];
 
 /** @return array<string,Permission> "METHOD pattern" => permission */
@@ -53,6 +57,7 @@ function guardedRoutes(): array
         'GET /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations' => Permission::InvitationsManage,
         'POST /api/invitations/{id}/revoke' => Permission::InvitationsManage,
+        'POST /api/invitations/{id}/send' => Permission::InvitationsManage,
         'GET /api/content/media' => Permission::ContentEdit,
         'POST /api/content/media' => Permission::ContentEdit,
         'PUT /api/content/media/{id}' => Permission::ContentEdit,

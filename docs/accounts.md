@@ -14,7 +14,7 @@ on it.
 | The app itself | yes | The first owner, the admin who signs in first | An email address and a password, one pair for `dev` and a different one for `prod` | Doppler `dev` and `prod`: `FIRST_USERNAME`, `FIRST_USER_PASSWORD` |
 | [DigitalOcean](https://www.digitalocean.com) | yes | The server, and the domain's DNS | Your SSH key | Your own machine; its public half on the server |
 | A domain registrar | yes | Your domain | none | Point its nameservers at DigitalOcean |
-| [Resend](https://resend.com) | when mail is built | Sending the app's email | An API key | Doppler `prod`: `RESEND_API_KEY` |
+| [Resend](https://resend.com) | yes, or another provider (docs/mail.md) | Sending the app's email | An API key with sending access | Doppler `prod`: `RESEND_API_KEY` |
 | [healthchecks.io](https://healthchecks.io) | optional | Noticing when the app stops answering | A check's ping URL | Doppler `prod`: `HEARTBEAT_URL` |
 | [Slack](https://slack.com) | optional | Hearing about a failed or refused deploy | An incoming-webhook URL | Doppler `prod`: `DEPLOY_ALERT_WEBHOOK` |
 
@@ -105,7 +105,11 @@ Wherever the domain was bought: set its nameservers to `ns1.digitalocean.com`,
 
 ## Resend
 
-Sends the app's email: invitations and password resets, once mail is built.
+Sends the app's email (docs/mail.md): invitations, password resets, and form
+notices to whoever reads the Inbox. The sender is `MAIL_FROM` in
+`docker-compose.prod.yml`; its domain must be verified, or Resend refuses
+every email. Another provider is an adapter behind `MailPort` (docs/mail.md,
+"Another provider").
 
 1. Add your domain (Domains → Add Domain). Resend shows the
    records to create; add each one in DigitalOcean's DNS exactly as shown, and
@@ -114,7 +118,25 @@ Sends the app's email: invitations and password resets, once mail is built.
    with the value `v=DMARC1; p=none;`.
 3. API Keys → **Create API Key**: name `waffle production`, permission
    **Sending access**, that domain. Copy it into Doppler `prod`
-   as `RESEND_API_KEY`.
+   as `RESEND_API_KEY`, then deploy the app again: it reads Doppler only when
+   it deploys.
+
+Without the key, production refuses to send, and each email's job fails on
+the Queue page; on a development machine each email is written to the
+worker's log instead (`docker compose logs worker`).
+
+**Mail sent to `@waffle.example.com`** (docs/mail.md, "Mail sent to the domain"):
+Resend receives it, and the app files it in the Inbox and emails the
+organisers. To turn it on:
+
+4. Resend → **Webhooks** → **Add Webhook**: endpoint
+   `https://waffle.example.com/webhooks/resend`, event `email.received`. Copy
+   its signing secret (`whsec_…`) into Doppler `prod` as
+   `RESEND_WEBHOOK_SECRET`.
+5. API Keys → **Create API Key** with **Full access** (Resend has no
+   read-only key), named `waffle receiving`. Copy it into Doppler `prod`
+   as `RESEND_RECEIVING_KEY`.
+6. Deploy the app again, so it reads both.
 
 ## Optional
 

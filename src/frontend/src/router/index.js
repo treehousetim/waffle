@@ -17,6 +17,20 @@ export const routes = [
     meta: { public: true, title: 'Sign in' }
   },
   {
+    // Asking for a password reset link (docs/password-reset.md).
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/views/ForgotPasswordView.vue'),
+    meta: { public: true, title: 'Reset your password' }
+  },
+  {
+    // A password reset link (docs/password-reset.md): open to anybody holding it.
+    path: '/reset/:token',
+    name: 'reset-password',
+    component: () => import('@/views/ResetPasswordView.vue'),
+    meta: { public: true, title: 'Choose a new password' }
+  },
+  {
     // An invitation link (docs/invitations.md): open to anybody holding it.
     path: '/invite/:token',
     name: 'invite',

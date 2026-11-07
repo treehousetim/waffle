@@ -39,8 +39,10 @@ both. docs/setups.md says so.
 **Resolved 2026-10-19 by the owner, not yet built:** a closed app joins by
 invitation (an owner sends a single-use link; no sign-up form). An open app
 registers only through OAuth with Google, Apple and GitHub, never an
-email-and-password form. Password accounts reset by an emailed link. Mail is
-SMTP through a provider, sent from the queue (docs/queue.md). OAuth needs a
+email-and-password form. Password accounts reset by an emailed link. Mail goes
+through a provider, sent from the queue (docs/queue.md); built 2026-11-07 on
+Resend's HTTP API through Guzzle, since SMTP would need a mail library not on
+the stack list (docs/mail.md). OAuth needs a
 client library that is not on the stack list: it is proposed for approval
 when the feature is built (AGENTS.md §2).
 

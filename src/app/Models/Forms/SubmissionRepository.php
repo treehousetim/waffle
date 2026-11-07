@@ -24,7 +24,7 @@ final readonly class SubmissionRepository
     }
 
     /** @param array<string,string> $payload */
-    public function insert(string $form, int $siteId, array $payload, string $ipHash, DateTimeImmutable $now): int
+    public function insert(string $form, ?int $siteId, array $payload, string $ipHash, DateTimeImmutable $now): int
     {
         $this->pdo->prepare(
             'INSERT INTO form_submissions (form_submissions_form_id, form_submissions_site_id, form_submissions_payload,'
@@ -42,6 +42,15 @@ final readonly class SubmissionRepository
     }
 
     /** How many submissions this visitor hash made since then (4.). */
+    /** Whether a message sent to the domain is filed already (docs/mail.md, 14.). */
+    public function hasEmail(string $emailId): bool
+    {
+        $statement = $this->pdo->prepare("SELECT 1 FROM form_submissions WHERE JSON_UNQUOTE(JSON_EXTRACT(form_submissions_payload, '$.email_id')) = ? LIMIT 1");
+        $statement->execute([$emailId]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
     public function countSince(string $ipHash, DateTimeImmutable $since): int
     {
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM form_submissions WHERE form_submissions_ip_hash = ? AND form_submissions_created_at >= ?');
@@ -129,7 +138,7 @@ final readonly class SubmissionRepository
         return new Submission(
             (int) $row['form_submissions_id'],
             (string) $row['form'],
-            (int) $row['form_submissions_site_id'],
+            $row['form_submissions_site_id'] === null ? null : (int) $row['form_submissions_site_id'],
             $payload,
             SubmissionStatus::from($this->types->name((int) $row['form_submissions_status_id'])),
             (string) $row['form_submissions_created_at'],

@@ -13,6 +13,8 @@ final readonly class FormDefinition
         /** What the visitor is told when it is received. */
         public string $thanks,
         public FormFields $fields,
+        // False for a form the app files itself, like Email (docs/mail.md, 15.).
+        public bool $fromSites = true,
     ) {
     }
 }
