@@ -18,7 +18,8 @@ visitor ──HTTPS──▶ front Caddy (/opt/edge, ports 80 and 443, the certi
 - **The `edge` network** is made by the front Caddy's Compose file. Each
   project's `docker-compose.prod.yml` puts its Caddy, and nothing else, on it
   under an alias: `<slug>-app` for the app, and for a site its slug with `_`
-  written `-` (`acme_site` is `acme-site`). Never the bare slug: the server
+  written `-`, ending in `-site` (`acme` and `acme_site` are both
+  `acme-site`). Never the bare slug: the server
   itself is often named for it, and that name resolves to the server, so the
   front Caddy would proxy to itself.
 - **The visitor's address.** The front Caddy sends it in `X-Forwarded-For`,
@@ -60,8 +61,8 @@ fetched as soon as DNS points here.
 ## A site beside the app
 
 A Waffle Site on the same server is on the `edge` network as its slug with
-`_` written `-` (`acme_site` is `acme-site`; its `docker-compose.prod.yml`
-names it). Add its hostname, and its `www` if it has one, to
+`_` written `-`, ending in `-site` (`acme_site` is `acme-site`; its
+`docker-compose.prod.yml` names it, and its rename sets it). Add its hostname, and its `www` if it has one, to
 `deploy/edge/Caddyfile`, then change it on the server as below:
 
 ```
