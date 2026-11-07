@@ -2,3 +2,5 @@
 # One per line: vendor/package exact-version, then the date and why.
 # tools/composer.sh appends here when COMPOSER_COOLDOWN_DAYS=0; delete an
 # entry once its week has passed.
+symfony/config v8.1.11  2026-11-07 the owner's call: fixes GHSA-5jff-8h8q-r5qx (XXE in XmlUtils::parse), which had stopped release builds' composer audit
+symfony/filesystem v8.1.11  2026-11-07 the owner's call: fixes GHSA-6prc-h956-hxjq (Path treats any prefix before :// as a root), which had stopped release builds' composer audit
