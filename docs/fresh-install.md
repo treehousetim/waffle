@@ -156,8 +156,8 @@ them out.
 `CHANGELOG.md`, commit, then (AGENTS.md §9, docs/releasing.md):
 
 ```bash
-./tools/release.sh      # v1: version, changelog, gate, tag, push, GitHub release
-gh run watch            # the build, which attaches waffle-v1.tar.gz to the release
+./tools/release.sh      # 1: version, changelog, gate, tag, push, GitHub release
+gh run watch            # the build, which attaches waffle-1.tar.gz to the release
 ```
 
 Within a minute of the files being attached, the server deploys it. Watch it
@@ -172,7 +172,7 @@ waffle-pull status
 | --- | --- |
 | `GITHUB_RELEASES_TOKEN is not set in Doppler` | the key is missing from `prod` (step 3), or the token in step 9 is not the deploy user's |
 | `GitHub's API has been failing (last answer: HTTP 401)` | the GitHub token expired or was revoked; make a new one (docs/accounts.md) |
-| `waiting for v1's assets`, then `still has no tarball` | the build failed; `gh run view` says why |
+| `waiting for 1's assets`, then `still has no tarball` | the build failed; `gh run view` says why |
 | `published by …, who is not in DEPLOY_AUTHORS` | add that login to the unit's `DEPLOY_AUTHORS` (step 10) |
 | `Doppler is installed but cannot read secrets` | step 9 skipped, not scoped to `/opt/waffle`, or not set as `deploy` |
 | `CRON_SECRET is not set in Doppler` | `prod` incomplete (step 5) |

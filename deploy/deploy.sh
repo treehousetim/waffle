@@ -3,11 +3,11 @@
 # deploy/deploy.sh — bring a release that deploy/pull.sh has unpacked into
 # service.
 #
-#   bash /opt/waffle/releases/v7/deploy/deploy.sh v7
+#   bash /opt/waffle/releases/7/deploy/deploy.sh 7
 #
 # Runs on the server, as the deploy user, from the release it is installing:
 # waffle-pull (deploy/pull.sh) downloads the release, checks its checksum,
-# unpacks it into releases/vN and runs this file from there, so the version
+# unpacks it into releases/N and runs this file from there, so the version
 # running is always the new one (docs/pull-based-deployments.md).
 #
 # The previous release keeps serving until this one is migrated and its
@@ -21,7 +21,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # 1. Arguments and directories.
 #
-#   /opt/waffle/releases/vN   this release (RELEASE_DIR)
+#   /opt/waffle/releases/N    this release (RELEASE_DIR)
 #   /opt/waffle/current       a link to the live release
 #   /opt/waffle/shared/       what outlives releases: deploy state, backups
 # ---------------------------------------------------------------------------

@@ -59,7 +59,7 @@ on the PATH. It never installs it.
  A module's `waffle` constraint is about
 the framework, and an app's `VERSION` is the app's own release number (1, 2,
 3), so the command reads the version the app was started from: the line
-`Started from [treehousetim/waffle vX.Y.Z]` that the rename writes at the top
+`Started from [treehousetim/waffle X.Y.Z]` that the rename writes at the top
 of `CHANGELOG.md`. In Waffle's own repository, `VERSION` is that version.
 
 ## How it is built

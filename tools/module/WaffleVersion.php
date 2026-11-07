@@ -21,10 +21,10 @@ final class WaffleVersion
 
         $changelog = is_file($root . '/CHANGELOG.md') ? (string) file_get_contents($root . '/CHANGELOG.md') : '';
 
-        if (preg_match('#^Started from \[treehousetim/waffle v(\d+\.\d+\.\d+)\]#m', $changelog, $match)) {
+        if (preg_match('#^Started from \[treehousetim/waffle v?(\d+\.\d+\.\d+)\]#m', $changelog, $match)) {
             return $match[1];
         }
 
-        throw new Refusal("cannot tell which Waffle version this app is built on: VERSION is not X.Y.Z, and CHANGELOG.md has no line 'Started from [treehousetim/waffle vX.Y.Z](...)'. Add that line with the version the app was started from (32).");
+        throw new Refusal("cannot tell which Waffle version this app is built on: VERSION is not X.Y.Z, and CHANGELOG.md has no line 'Started from [treehousetim/waffle X.Y.Z](...)'. Add that line with the version the app was started from (32).");
     }
 }

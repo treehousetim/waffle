@@ -11,15 +11,15 @@ directory on the server.
 ## Overview
 
 ```
-./tools/release.sh ──▶ GitHub Release vN
-                          │  deploy.yml builds it and attaches <slug>-vN.tar.gz + .sha256
+./tools/release.sh ──▶ GitHub Release N
+                          │  deploy.yml builds it and attaches <slug>-N.tar.gz + .sha256
                           ▼
 server: <slug>-deploy.timer, every minute ──▶ <slug>-pull check   (deploy/pull.sh)
-   ├─ guards: vN? newer than live? approved publisher? both files attached? checksum?
-   ├─ unpack into /opt/<slug>/releases/vN, then run that release's deploy/deploy.sh:
+   ├─ guards: a release number? newer than live? approved publisher? both files attached? checksum?
+   ├─ unpack into /opt/<slug>/releases/N, then run that release's deploy/deploy.sh:
    │    ├─ complete? Doppler readable? DNS here? Caddyfile valid? images rebuilt if docker/ changed
    │    ├─ queue worker stopped; migrations from the new release, the old one still serving
-   │    ├─ /opt/<slug>/current → releases/vN; php, worker and Caddy recreated from it
+   │    ├─ /opt/<slug>/current → releases/N; php, worker and Caddy recreated from it
    │    ├─ /cron/health says the database is ok and names this release's newest migration;
    │    │  HTTPS answers with a valid certificate
    │    └─ if not: current back to the previous release, its containers recreated
@@ -30,11 +30,11 @@ server: <slug>-deploy.timer, every minute ──▶ <slug>-pull check   (deploy/
 
 | Piece | What it is |
 | --- | --- |
-| `.github/workflows/deploy.yml` | On `release: published`: the `build` job (read-only) builds the frontend in containers that see only its source (the build offline), builds `vendor/`, audits both and packs the tree; the `attach` job, the only one that can write and which runs no package manager, uploads `<slug>-vN.tar.gz` and its `.sha256` to the release. No secrets. |
+| `.github/workflows/deploy.yml` | On `release: published`: the `build` job (read-only) builds the frontend in containers that see only its source (the build offline), builds `vendor/`, audits both and packs the tree; the `attach` job, the only one that can write and which runs no package manager, uploads `<slug>-N.tar.gz` and its `.sha256` to the release. No secrets. |
 | `deploy/pull.sh` | The poller, installed by hand as `/usr/local/sbin/<slug>-pull`: `check`, `deploy <tag>`, `status`, `retry`. |
 | `deploy/systemd/<slug>-deploy.service` + `.timer` | Run `<slug>-pull check` every minute as the `deploy` user. The service holds the settings: `APP_ROOT`, `SLUG`, `REPO`, `DEPLOY_AUTHORS`, `KEEP`. None is secret. |
 | `deploy/deploy.sh` | Inside each release: brings that release into service, as above. The poller runs the new release's copy, so the deploy logic is always the new release's. |
-| `/opt/<slug>/releases/vN/` | One directory per release. The newest `KEEP` (5) stay, and always the live and previous ones. |
+| `/opt/<slug>/releases/N/` | One directory per release. The newest `KEEP` (5) stay, and always the live and previous ones. |
 | `/opt/<slug>/current` | The link to the live release. The crontab and the backup use this path. |
 | `/opt/<slug>/shared/` | What outlives releases and is not a volume: `deploy/` (state, the lock, the cron header file, logs) and `backups/`. |
 | Named volumes | `db_data` (the database) and `storage_data` (uploads). The Compose project is named for the slug, so every release shares them. The certificates are the front Caddy's, in `/opt/edge` (docs/edge.md). |
@@ -77,7 +77,7 @@ can run Docker and so is as good as root. Everything here protects that file:
   frontend's source, the build with no network, and only `index.html` and
   `assets/` come out (AGENTS.md §8). The rest of the tree is the tag's own,
   and composer runs no package's code.
-- **Which tag.** A tag ruleset lets only the owner create or move a `v` tag
+- **Which tag.** A tag ruleset lets only the owner create, move or delete a tag
   (docs/accounts.md), and the poller refuses a release older than live or
   published by someone not in `DEPLOY_AUTHORS`.
 - **What is on disk.** A release kept on disk is checked against the list of
@@ -89,12 +89,12 @@ can run Docker and so is as good as root. Everything here protects that file:
 | Command | Use |
 | --- | --- |
 | `<slug>-pull status` | Live, previous, failed and held releases, the lock, what is kept. |
-| `<slug>-pull deploy vN` | Deploy one tag, older ones included: **the rollback**. It holds the server there until a newer release is published, or `retry`. It is not guarded by "newer than live" or the publisher, only by the checksum. Releases still on disk deploy without downloading. |
+| `<slug>-pull deploy 7` | Deploy one release by its number, older ones included: **the rollback**. It holds the server there until a newer release is published, or `retry`. It is not guarded by "newer than live" or the publisher, only by the checksum. Releases still on disk deploy without downloading. |
 | `<slug>-pull retry` | Forget a failed release and a hold, so the next tick deploys the latest again. |
 | `journalctl -fu <slug>-deploy` | Watch a deploy. |
 
 Run a manual deploy under `tmux`, or `systemd-run --unit=<slug>-deploy-manual
---uid=deploy <slug>-pull deploy vN`, so a dropped SSH session cannot stop a
+--uid=deploy <slug>-pull deploy 7`, so a dropped SSH session cannot stop a
 migration halfway: MariaDB commits each DDL statement on its own.
 
 **Code rolls back; the schema does not.** That is why migrations only add,
@@ -112,7 +112,7 @@ is asserted in `tests/Unit/DeployScriptsTest.php`.
    release: nothing changes and the tick fails; it is reported once it has
    lasted `API_ALERT_MINUTES` (60), never read as "nothing to do".
 2. No release has been published yet: nothing to do.
-3. The latest release's tag is not `vN`: refused, reported once.
+3. The latest release's tag is not a release number: refused, reported once.
 4. The latest release is the one live: nothing to do, quietly.
 5. The latest release is older than the one live (an old tag marked latest
    again): refused, reported once. Versions compare as numbers, so `v10` is
@@ -122,7 +122,7 @@ is asserted in `tests/Unit/DeployScriptsTest.php`.
 7. The release's files are not attached yet, or still uploading: wait without
    failing; reported once if still missing after `ASSET_WAIT_MINUTES` (15).
 8. The tarball does not match its checksum: refused, nothing kept, reported
-   once. This holds for a named `deploy vN` too.
+   once. This holds for a named `deploy 7` too.
 9. The unpacked tree is incomplete: refused before anything stops.
 10. A tick starts while a deploy runs: the lock skips it.
 11. A release that failed is not retried on every tick: only after `retry`, or
@@ -145,12 +145,12 @@ is asserted in `tests/Unit/DeployScriptsTest.php`.
     again.
 19. The poller is run as anyone but the deploy user: refused before it
     touches anything, so its lock and state stay the deploy user's.
-20. A rollback by name is undone by the next tick: after `deploy vN`, the
+20. A rollback by name is undone by the next tick: after `deploy 7`, the
     server holds there until a release newer than what was latest is
     published, or `retry`. A rollback while GitHub cannot be read holds
     whatever the first check after it finds.
 
-A tag that is not `vN` is never repeated in an alert, and alerts are escaped
+A tag that is not a release number is never repeated in an alert, and alerts are escaped
 for Slack, so a crafted tag cannot post a link or mention a channel.
 
 And in `deploy/deploy.sh`, before `current` moves: an incomplete release,

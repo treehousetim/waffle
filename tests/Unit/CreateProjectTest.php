@@ -174,7 +174,7 @@ it('starts the project\'s own release stream, recording where it started (18)', 
     $changelog = (string) file_get_contents($this->dir . '/CHANGELOG.md');
 
     expect(file_get_contents($this->dir . '/VERSION'))->toBe("0\n")
-        ->and($changelog)->toContain("Started from [treehousetim/waffle v{$waffle}](https://github.com/treehousetim/waffle/releases/tag/v{$waffle}).")
+        ->and($changelog)->toContain("Started from [treehousetim/waffle {$waffle}](https://github.com/treehousetim/waffle/releases/tag/{$waffle}).")
         ->and($changelog)->toEndWith("## [Unreleased]\n")
         // None of the framework's own history comes along.
         ->and($changelog)->not->toMatch('/^## \[\d/m');

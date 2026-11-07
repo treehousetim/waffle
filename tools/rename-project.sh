@@ -158,7 +158,7 @@ fi
 # treehousetim/waffle, so no later run renames it.
 STARTED_FROM="$(tr -d ' \t\r\n' < VERSION 2>/dev/null || true)"
 if [[ "$STARTED_FROM" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    ORIGIN_LINE="Started from [treehousetim/waffle v${STARTED_FROM}](https://github.com/treehousetim/waffle/releases/tag/v${STARTED_FROM})."
+    ORIGIN_LINE="Started from [treehousetim/waffle ${STARTED_FROM}](https://github.com/treehousetim/waffle/releases/tag/${STARTED_FROM})."
 else
     ORIGIN_LINE="Started from [treehousetim/waffle](https://github.com/treehousetim/waffle)."
 fi

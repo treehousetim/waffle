@@ -58,7 +58,7 @@ it('writes the version nowhere else', function (): void {
 it('deploys only an app\'s release tags, and never from the framework\'s own repository', function (): void {
     $workflow = projectFile('.github/workflows/deploy.yml');
 
-    expect($workflow)->toContain('if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then')
+    expect($workflow)->toContain('if [[ ! "$TAG" =~ ^[1-9][0-9]*$ ]]; then')
         ->and(explode("\n", $workflow))->toContain("    if: github.repository != 'treehousetim/waffle'");
 });
 

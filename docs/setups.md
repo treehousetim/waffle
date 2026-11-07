@@ -104,7 +104,7 @@ no Docker in production. Locally it runs exactly as in the other setups (the
 dev server and Caddy in Docker); remotely, a static host serves the files.
 
 - **Publishing is a GitHub release, as in every setup.** `./tools/release.sh`
-  cuts `vN`; the release workflow builds that tag (type check, build, SEO
+  cuts the next release number; the release workflow builds that tag (type check, build, SEO
   audit; any error stops it) and hands the files to the host, committing
   them to a `publish` branch the host deploys from. Rollback is the workflow
   run for an older tag. **DigitalOcean App Platform's free static sites** are

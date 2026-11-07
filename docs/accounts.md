@@ -55,9 +55,9 @@ the same way, with these differences:
 **Protect `main`** (Settings → Branches): pull requests required.
 
 **Protect the release tags** (Settings → Rules → Rulesets → New tag ruleset):
-target `v*`, restrict creations, updates and deletions, and add yourself to
-the bypass list. Only you can then make or move a `v` tag, which is what a
-release deploys.
+target every tag (`~ALL`), restrict creations, updates and deletions, and add
+yourself to the bypass list. Only you can then make, move or delete a tag, and
+a release's tag is what deploys.
 
 ## Doppler
 

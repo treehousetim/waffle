@@ -174,34 +174,34 @@ function pullCleanup(array $fixture): void
 
 it('pulls a newer release, checks it, unpacks it and hands it to its own deploy.sh', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v1');
-    pullRelease($f, 'v2');
+    pullLive($f, '1');
+    pullRelease($f, '2');
 
     [$code, $out] = pull($f);
 
     expect($code)->toBe(0, $out)
-        ->and(pullDeployed($f))->toBe("v2\n")
-        ->and(is_file($f['root'] . '/releases/v2/vendor/autoload.php'))->toBeTrue()
-        ->and(readlink($f['root'] . '/current'))->toBe('releases/v2')
+        ->and(pullDeployed($f))->toBe("2\n")
+        ->and(is_file($f['root'] . '/releases/2/vendor/autoload.php'))->toBeTrue()
+        ->and(readlink($f['root'] . '/current'))->toBe('releases/2')
         ->and(pullAlerts($f))->toBe('');
     pullCleanup($f);
 });
 
 it('deploys the first release onto an empty server', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v1');
+    pullRelease($f, '1');
 
     [$code] = pull($f);
 
     expect($code)->toBe(0)
-        ->and(pullDeployed($f))->toBe("v1\n");
+        ->and(pullDeployed($f))->toBe("1\n");
     pullCleanup($f);
 });
 
 it('does nothing, quietly, when the latest release is already live (4)', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v3');
-    pullRelease($f, 'v3');
+    pullLive($f, '3');
+    pullRelease($f, '3');
 
     [$code] = pull($f);
 
@@ -221,47 +221,47 @@ it('does nothing when no release has been published yet (2)', function (): void 
     pullCleanup($f);
 });
 
-it('refuses a tag that is not vN, says so once, and never repeats the tag (3)', function (): void {
+it('refuses a tag that is not a release number, says so once, and never repeats the tag (3)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2-<!channel>');
+    pullRelease($f, '2-<!channel>');
 
     pull($f);
     [$code] = pull($f);
 
     expect($code)->toBe(0)
         ->and(pullDeployed($f))->toBe('')
-        ->and(substr_count(pullAlerts($f), 'is not vN'))->toBe(1)
+        ->and(substr_count(pullAlerts($f), 'is not a release number'))->toBe(1)
         ->and(pullAlerts($f))->not->toContain('<!channel>');
     pullCleanup($f);
 });
 
 it('refuses a release older than the one live, so a re-marked old tag cannot roll back (5)', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v10');
-    pullRelease($f, 'v9');
+    pullLive($f, '10');
+    pullRelease($f, '9');
 
     pull($f);
     pull($f);
 
     expect(pullDeployed($f))->toBe('')
-        ->and(substr_count(pullAlerts($f), 'older than v10'))->toBe(1);
+        ->and(substr_count(pullAlerts($f), 'older than 10'))->toBe(1);
     pullCleanup($f);
 });
 
 it('compares versions as numbers, not text (5)', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v9');
-    pullRelease($f, 'v10');
+    pullLive($f, '9');
+    pullRelease($f, '10');
 
     pull($f);
 
-    expect(pullDeployed($f))->toBe("v10\n");
+    expect(pullDeployed($f))->toBe("10\n");
     pullCleanup($f);
 });
 
 it('refuses a release published by someone not approved (6)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['author' => 'mallory']);
+    pullRelease($f, '2', ['author' => 'mallory']);
 
     pull($f);
     pull($f);
@@ -273,7 +273,7 @@ it('refuses a release published by someone not approved (6)', function (): void 
 
 it('waits without failing while the assets are still being attached (7)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['assets' => false]);
+    pullRelease($f, '2', ['assets' => false]);
 
     [$code] = pull($f);
 
@@ -285,7 +285,7 @@ it('waits without failing while the assets are still being attached (7)', functi
 
 it('counts an asset still uploading as missing (7)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['uploaded' => false]);
+    pullRelease($f, '2', ['uploaded' => false]);
 
     pull($f);
 
@@ -295,7 +295,7 @@ it('counts an asset still uploading as missing (7)', function (): void {
 
 it('says so, once, when the assets have been missing too long (7)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['assets' => false]);
+    pullRelease($f, '2', ['assets' => false]);
 
     pull($f, ['check'], ['ASSET_WAIT_MINUTES' => '0']);
     pull($f, ['check'], ['ASSET_WAIT_MINUTES' => '0']);
@@ -306,33 +306,33 @@ it('says so, once, when the assets have been missing too long (7)', function ():
 
 it('refuses a tarball that does not match its checksum, and keeps nothing of it (8)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['badSum' => true]);
+    pullRelease($f, '2', ['badSum' => true]);
 
     pull($f);
     pull($f);
 
     expect(pullDeployed($f))->toBe('')
-        ->and(is_dir($f['root'] . '/releases/v2'))->toBeFalse()
-        ->and(is_dir($f['root'] . '/releases/v2.partial'))->toBeFalse()
+        ->and(is_dir($f['root'] . '/releases/2'))->toBeFalse()
+        ->and(is_dir($f['root'] . '/releases/2.partial'))->toBeFalse()
         ->and(substr_count(pullAlerts($f), 'checksum'))->toBe(1);
     pullCleanup($f);
 });
 
 it('refuses a release whose tree is incomplete (9)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['complete' => false]);
+    pullRelease($f, '2', ['complete' => false]);
 
     pull($f);
 
     expect(pullDeployed($f))->toBe('')
-        ->and(is_dir($f['root'] . '/releases/v2'))->toBeFalse()
+        ->and(is_dir($f['root'] . '/releases/2'))->toBeFalse()
         ->and(pullAlerts($f))->toContain('incomplete');
     pullCleanup($f);
 });
 
 it('skips a tick while another deploy holds the lock (10)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
     $holder = proc_open(['flock', $f['root'] . '/shared/deploy/lock', 'sleep', '3'], [], $pipes);
     usleep(300_000);
 
@@ -346,36 +346,36 @@ it('skips a tick while another deploy holds the lock (10)', function (): void {
 
 it('records a failed deploy, says so, and does not retry it on the next tick (11, 12)', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v1');
-    pullRelease($f, 'v2');
+    pullLive($f, '1');
+    pullRelease($f, '2');
 
     [$code] = pull($f, ['check'], ['FAKE_DEPLOY_EXIT' => '1']);
     pull($f, ['check'], ['FAKE_DEPLOY_EXIT' => '1']);
 
     expect($code)->toBe(1)
-        ->and(pullDeployed($f))->toBe("v2\n")
-        ->and(trim((string) file_get_contents($f['root'] . '/shared/deploy/failed-tag')))->toBe('v2')
-        ->and(pullAlerts($f))->toContain('v2 failed')
-        ->and(readlink($f['root'] . '/current'))->toBe('releases/v1');
+        ->and(pullDeployed($f))->toBe("2\n")
+        ->and(trim((string) file_get_contents($f['root'] . '/shared/deploy/failed-tag')))->toBe('2')
+        ->and(pullAlerts($f))->toContain('2 failed')
+        ->and(readlink($f['root'] . '/current'))->toBe('releases/1');
     pullCleanup($f);
 });
 
 it('tries a failed release again after retry (11)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
     pull($f, ['check'], ['FAKE_DEPLOY_EXIT' => '1']);
 
     pull($f, ['retry']);
     pull($f);
 
-    expect(pullDeployed($f))->toBe("v2\nv2\n")
+    expect(pullDeployed($f))->toBe("2\n2\n")
         ->and(is_file($f['root'] . '/shared/deploy/failed-tag'))->toBeFalse();
     pullCleanup($f);
 });
 
 it('reports GitHub being unreachable only once it has lasted (1)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
 
     [$quiet] = pull($f, ['check'], ['FAKE_API_DOWN' => '1']);
     $before = pullAlerts($f);
@@ -402,7 +402,7 @@ it('treats an answer it cannot read as GitHub failing, never as nothing to do (1
 
 it('stops, and says so once, without the release token (13)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
 
     [$code] = pull($f, ['check'], ['FAKE_SECRET_GITHUB_RELEASES_TOKEN' => '']);
     pull($f, ['check'], ['FAKE_SECRET_GITHUB_RELEASES_TOKEN' => '']);
@@ -415,7 +415,7 @@ it('stops, and says so once, without the release token (13)', function (): void 
 
 it('stops when Doppler cannot be read (13)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
 
     [$code, , $err] = pull($f, ['check'], ['FAKE_DOPPLER_DOWN' => '1']);
 
@@ -427,40 +427,40 @@ it('stops when Doppler cannot be read (13)', function (): void {
 
 it('clears a half-unpacked release left by an interrupted run (14)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
-    mkdir($f['root'] . '/releases/v2.partial/stale', 0o755, true);
+    pullRelease($f, '2');
+    mkdir($f['root'] . '/releases/2.partial/stale', 0o755, true);
 
     pull($f);
 
-    expect(is_dir($f['root'] . '/releases/v2.partial'))->toBeFalse()
-        ->and(is_dir($f['root'] . '/releases/v2/stale'))->toBeFalse()
-        ->and(pullDeployed($f))->toBe("v2\n");
+    expect(is_dir($f['root'] . '/releases/2.partial'))->toBeFalse()
+        ->and(is_dir($f['root'] . '/releases/2/stale'))->toBeFalse()
+        ->and(pullDeployed($f))->toBe("2\n");
     pullCleanup($f);
 });
 
 it('keeps the newest releases, and always the live and previous ones (15)', function (): void {
     $f = pullFixture();
 
-    foreach (['v1', 'v2', 'v3', 'v4', 'v5'] as $tag) {
+    foreach (['1', '2', '3', '4', '5'] as $tag) {
         mkdir($f['root'] . '/releases/' . $tag);
     }
 
-    file_put_contents($f['root'] . '/shared/deploy/previous-tag', "v1\n");
-    pullLive($f, 'v5');
-    pullRelease($f, 'v6');
+    file_put_contents($f['root'] . '/shared/deploy/previous-tag', "1\n");
+    pullLive($f, '5');
+    pullRelease($f, '6');
 
     pull($f, ['check'], ['KEEP' => '2']);
 
     $left = array_values(array_diff((array) scandir($f['root'] . '/releases'), ['.', '..']));
     sort($left);
 
-    expect($left)->toBe(['v5', 'v6']);
+    expect($left)->toBe(['5', '6']);
     pullCleanup($f);
 });
 
 it('never puts the release token on a command line or leaves it on disk (16)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
 
     pull($f);
     $left = (string) shell_exec('grep -rl ' . escapeshellarg(PULL_TOKEN) . ' ' . escapeshellarg($f['root']) . ' 2>/dev/null');
@@ -472,78 +472,78 @@ it('never puts the release token on a command line or leaves it on disk (16)', f
 
 it('deploys a named tag on request, older ones included, for a deliberate rollback', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v5');
-    pullRelease($f, 'v4');
+    pullLive($f, '5');
+    pullRelease($f, '4');
 
-    [$code] = pull($f, ['deploy', 'v4']);
+    [$code] = pull($f, ['deploy', '4']);
 
     expect($code)->toBe(0)
-        ->and(pullDeployed($f))->toBe("v4\n");
+        ->and(pullDeployed($f))->toBe("4\n");
     pullCleanup($f);
 });
 
 it('holds after a rollback by name: the next tick does not deploy the newer release again (20)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v4');
+    pullRelease($f, '4');
     pull($f);
-    pullRelease($f, 'v5');
+    pullRelease($f, '5');
     pull($f);
 
-    [$code, $out] = pull($f, ['deploy', 'v4']);
+    [$code, $out] = pull($f, ['deploy', '4']);
     pull($f);
     pull($f);
     [, $status] = pull($f, ['status']);
 
     expect($code)->toBe(0, $out)
-        ->and(pullDeployed($f))->toBe("v4\nv5\nv4\n")
-        ->and(readlink($f['root'] . '/current'))->toBe('releases/v4')
-        ->and($status)->toContain('held:     v5');
+        ->and(pullDeployed($f))->toBe("4\n5\n4\n")
+        ->and(readlink($f['root'] . '/current'))->toBe('releases/4')
+        ->and($status)->toContain('held:     5');
     pullCleanup($f);
 });
 
 it('ends the hold when something newer is published, or on retry (20)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v4');
+    pullRelease($f, '4');
     pull($f);
-    pullRelease($f, 'v5');
+    pullRelease($f, '5');
     pull($f);
-    pull($f, ['deploy', 'v4']);
+    pull($f, ['deploy', '4']);
 
-    pullRelease($f, 'v6');
+    pullRelease($f, '6');
     pull($f);
     $afterNewer = readlink($f['root'] . '/current');
 
-    pull($f, ['deploy', 'v4']);
+    pull($f, ['deploy', '4']);
     pull($f, ['retry']);
     pull($f);
 
-    expect($afterNewer)->toBe('releases/v6')
-        ->and(readlink($f['root'] . '/current'))->toBe('releases/v6');
+    expect($afterNewer)->toBe('releases/6')
+        ->and(readlink($f['root'] . '/current'))->toBe('releases/6');
     pullCleanup($f);
 });
 
 it('holds whatever the next check finds after a rollback while GitHub cannot be read (20)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v4');
+    pullRelease($f, '4');
     pull($f);
-    pullRelease($f, 'v5');
+    pullRelease($f, '5');
     pull($f);
 
-    [$code] = pull($f, ['deploy', 'v4'], ['FAKE_API_DOWN' => '1']);
+    [$code] = pull($f, ['deploy', '4'], ['FAKE_API_DOWN' => '1']);
     pull($f);
     [, $status] = pull($f, ['status']);
 
     expect($code)->toBe(0)
-        ->and(readlink($f['root'] . '/current'))->toBe('releases/v4')
-        ->and($status)->toContain('held:     v5');
+        ->and(readlink($f['root'] . '/current'))->toBe('releases/4')
+        ->and($status)->toContain('held:     5');
     pullCleanup($f);
 });
 
 it('still refuses a named tag that fails its checksum (8)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v4', ['badSum' => true]);
+    pullRelease($f, '4', ['badSum' => true]);
 
-    [$code] = pull($f, ['deploy', 'v4']);
+    [$code] = pull($f, ['deploy', '4']);
 
     expect($code)->toBe(1)
         ->and(pullDeployed($f))->toBe('');
@@ -552,16 +552,16 @@ it('still refuses a named tag that fails its checksum (8)', function (): void {
 
 it('shows what is live, what was before, and what failed', function (): void {
     $f = pullFixture();
-    pullLive($f, 'v7');
-    file_put_contents($f['root'] . '/shared/deploy/previous-tag', "v6\n");
-    file_put_contents($f['root'] . '/shared/deploy/failed-tag', "v8\n");
+    pullLive($f, '7');
+    file_put_contents($f['root'] . '/shared/deploy/previous-tag', "6\n");
+    file_put_contents($f['root'] . '/shared/deploy/failed-tag', "8\n");
 
     [$code, $out] = pull($f, ['status']);
 
     expect($code)->toBe(0)
-        ->and($out)->toContain('live:     v7')
-        ->and($out)->toContain('previous: v6')
-        ->and($out)->toContain('failed:   v8');
+        ->and($out)->toContain('live:     7')
+        ->and($out)->toContain('previous: 6')
+        ->and($out)->toContain('failed:   8');
     pullCleanup($f);
 });
 
@@ -577,22 +577,22 @@ it('rejects a command it does not know', function (): void {
 
 it('refuses release files that GitHub Actions did not upload, and says so once (17)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['uploader' => 'mallory']);
+    pullRelease($f, '2', ['uploader' => 'mallory']);
 
     pull($f);
     pull($f);
 
     expect(pullDeployed($f))->toBe('')
-        ->and(is_dir($f['root'] . '/releases/v2'))->toBeFalse()
+        ->and(is_dir($f['root'] . '/releases/2'))->toBeFalse()
         ->and(substr_count(pullAlerts($f), 'not uploaded by github-actions[bot]'))->toBe(1);
     pullCleanup($f);
 });
 
 it('refuses to deploy a release on disk that has changed since it was unpacked (18)', function (string $change): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
     pull($f, ['check'], ['FAKE_DEPLOY_EXIT' => '1']);
-    $release = $f['root'] . '/releases/v2';
+    $release = $f['root'] . '/releases/2';
     match ($change) {
         'edited' => file_put_contents($release . '/deploy/deploy.sh', "\necho planted\n", FILE_APPEND),
         'added' => file_put_contents($release . '/tools-planted.sh', "echo planted\n"),
@@ -600,17 +600,17 @@ it('refuses to deploy a release on disk that has changed since it was unpacked (
     };
 
     pull($f, ['retry']);
-    [$code] = pull($f, ['deploy', 'v2']);
+    [$code] = pull($f, ['deploy', '2']);
 
     expect($code)->toBe(1)
-        ->and(pullDeployed($f))->toBe("v2\n")
+        ->and(pullDeployed($f))->toBe("2\n")
         ->and(pullAlerts($f))->toContain('changed since it was unpacked');
     pullCleanup($f);
 })->with(['edited', 'added', 'removed']);
 
 it('refuses to run as anyone but the deploy user (19)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2');
+    pullRelease($f, '2');
 
     [$code, , $err] = pull($f, ['check'], ['DEPLOY_USER' => 'someone-else']);
 
@@ -622,7 +622,7 @@ it('refuses to run as anyone but the deploy user (19)', function (): void {
 
 it('never puts the alert webhook on a command line (16)', function (): void {
     $f = pullFixture();
-    pullRelease($f, 'v2', ['author' => 'mallory']);
+    pullRelease($f, '2', ['author' => 'mallory']);
 
     pull($f);
 
@@ -630,3 +630,13 @@ it('never puts the alert webhook on a command line (16)', function (): void {
         ->and((string) file_get_contents($f['shims'] . '/curl.args'))->not->toContain('hooks.example');
     pullCleanup($f);
 });
+
+it('refuses a named tag that is not a release number', function (string $tag): void {
+    $f = pullFixture();
+
+    [$code] = pull($f, ['deploy', $tag]);
+
+    expect($code)->toBe(2)
+        ->and(pullDeployed($f))->toBe('');
+    pullCleanup($f);
+})->with(['v2', 'main', '2;id', '../2', '0', '02']);

@@ -4,7 +4,7 @@
 # it, unpack it, and hand it to its own deploy/deploy.sh.
 #
 #   waffle-pull check          # what the timer runs every minute
-#   waffle-pull deploy v7      # deploy one tag, older ones included
+#   waffle-pull deploy 7       # deploy one tag, older ones included
 #   waffle-pull status         # live, previous, failed, waiting
 #   waffle-pull retry          # forget a failure so check tries it again
 #
@@ -234,8 +234,8 @@ prune() {
     local live previous
     live="$(live_tag || true)"
     previous="$(cat "$STATE/previous-tag" 2>/dev/null || true)"
-    find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -name 'v*' ! -name '*.partial' -printf '%f\n' \
-        | grep -E '^v[0-9]+$' | sort -t v -k 2 -n -r | tail -n +"$((KEEP + 1))" \
+    find "$RELEASES" -mindepth 1 -maxdepth 1 -type d ! -name '*.partial' -printf '%f\n' \
+        | grep -E '^[0-9]+$' | sort -n -r | tail -n +"$((KEEP + 1))" \
         | while read -r old; do
             [ "$old" = "$live" ] || [ "$old" = "$previous" ] || rm -rf "${RELEASES:?}/$old" "${MANIFESTS:?}/$old"
         done
@@ -285,12 +285,12 @@ check() {
 
     [ "$TAG" = "$live" ] && exit 0   # (4)
 
-    if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then
-        # Not repeated: a tag that is not vN is text nobody has checked.
-        alert "refused-$(key "$TAG")" "the latest release's tag is not vN; not deploying it"   # (3)
+    if [[ ! "$TAG" =~ ^[1-9][0-9]*$ ]]; then
+        # Not repeated: a tag that is not a release number is text nobody has checked.
+        alert "refused-$(key "$TAG")" "the latest release's tag is not a release number; not deploying it"   # (3)
         exit 0
     fi
-    if [ -n "$live" ] && [ "${TAG#v}" -le "${live#v}" ]; then
+    if [ -n "$live" ] && [ "$TAG" -le "$live" ]; then
         alert "refused-$(key "$TAG")" "the latest release, ${TAG}, is older than ${live}, which is live; not deploying it"   # (5)
         exit 0
     fi
@@ -328,7 +328,7 @@ check() {
 deploy_tag() {
     local tag="$1"
     local hold=unknown
-    [[ "$tag" =~ ^v[1-9][0-9]*$ ]] || { echo "error: '${tag}' is not vN" >&2; exit 2; }
+    [[ "$tag" =~ ^[1-9][0-9]*$ ]] || { echo "error: '${tag}' is not a release number, like 7" >&2; exit 2; }
     settings
     lock
     open_github

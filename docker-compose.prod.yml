@@ -4,7 +4,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # deploy/deploy.sh invokes it exactly that way, from the release it is
-# deploying (/opt/waffle/releases/vN), so `.` below is that release.
+# deploying (/opt/waffle/releases/N), so `.` below is that release.
 
 # `!override` (Compose v2.24+) REPLACES the base list instead of appending to
 # it. Without it, Compose merges port lists and the server would also publish

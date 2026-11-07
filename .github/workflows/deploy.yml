@@ -3,7 +3,7 @@ name: Deploy
 # Releases only. Nothing deploys from a branch push.
 #
 # This workflow never reaches the server. It builds the release and attaches
-# it to the GitHub release as waffle-vN.tar.gz and its .sha256; the server
+# it to the GitHub release as waffle-N.tar.gz and its .sha256; the server
 # pulls it from there itself, every minute, and deploys it
 # (deploy/pull.sh, docs/pull-based-deployments.md).
 on:
@@ -55,8 +55,8 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then
-            echo "::error::release tag is not vN (an app's release number, docs/releasing.md); refusing to deploy it"
+          if [[ ! "$TAG" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::release tag is not an app's release number (docs/releasing.md); refusing to deploy it"
             exit 1
           fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"
@@ -207,8 +207,8 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          if [[ ! "$TAG" =~ ^v[1-9][0-9]*$ ]]; then
-            echo "::error::release tag is not vN (an app's release number, docs/releasing.md); refusing to attach it"
+          if [[ ! "$TAG" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::release tag is not an app's release number (docs/releasing.md); refusing to attach it"
             exit 1
           fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"

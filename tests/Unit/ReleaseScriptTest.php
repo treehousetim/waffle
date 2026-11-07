@@ -159,12 +159,12 @@ it('releases an app as the next number: version, changelog, commit, tag, push, n
         ->and(file_get_contents($repo['dir'] . '/VERSION'))->toBe("8\n")
         ->and(file_get_contents($repo['dir'] . '/CHANGELOG.md'))
         ->toBe("# Changelog\n\n## [Unreleased]\n\n## [8] - {$today}\n\n### Added\n- A thing.\n\n## [7] - 2026-01-01\n\n### Fixed\n- Old.\n")
-        ->and(repoGit($repo, 'log', '-1', '--format=%s'))->toBe('Release v8')
+        ->and(repoGit($repo, 'log', '-1', '--format=%s'))->toBe('Release 8')
         ->and(repoGit($repo, 'status', '--porcelain'))->toBe('')
         // Both landed on origin, and they agree.
         ->and(repoGit($repo, 'ls-remote', 'origin', 'refs/heads/main'))->toStartWith(repoGit($repo, 'rev-parse', 'HEAD'))
-        ->and(repoGit($repo, 'ls-remote', 'origin', 'refs/tags/v8^{}'))->toStartWith(repoGit($repo, 'rev-parse', 'HEAD'))
-        ->and($run['gh'])->toContain('release create v8')
+        ->and(repoGit($repo, 'ls-remote', 'origin', 'refs/tags/8^{}'))->toStartWith(repoGit($repo, 'rev-parse', 'HEAD'))
+        ->and($run['gh'])->toContain('release create 8 ')
         ->and(trim((string) $run['notes']))->toBe("### Added\n- A thing.");
 });
 
@@ -185,6 +185,16 @@ it('works out the next version (7)', function (string $version, array $args, str
     'the framework, --major' => ['0.4.2', ['--major'], '1.0.0'],
     'the framework, two-digit parts' => ['1.19.9', [], '1.19.10'],
 ]);
+
+it('tags the framework\'s own release with its version alone (9, 10)', function (): void {
+    $repo = releaseRepo('0.4.2');
+
+    $run = runRelease($repo);
+
+    expect($run['code'])->toBe(0, $run['err'])
+        ->and(repoGit($repo, 'ls-remote', 'origin', 'refs/tags/0.4.3^{}'))->toStartWith(repoGit($repo, 'rev-parse', 'HEAD'))
+        ->and($run['gh'])->toContain('release create 0.4.3 ');
+});
 
 it('refuses a semver bump for an app (7)', function (string $flag): void {
     $repo = releaseRepo('7');
@@ -274,17 +284,17 @@ it('refuses a release with nothing under [Unreleased] (4)', function (): void {
 
 it('refuses a tag that already exists, here or on origin (5)', function (bool $pushed): void {
     $repo = releaseRepo('7');
-    repoGit($repo, 'tag', 'v8');
+    repoGit($repo, 'tag', '8');
     if ($pushed) {
-        repoGit($repo, 'push', '-q', 'origin', 'v8');
-        repoGit($repo, 'tag', '-d', 'v8');
+        repoGit($repo, 'push', '-q', 'origin', '8');
+        repoGit($repo, 'tag', '-d', '8');
     }
     $before = repoState($repo);
 
     $run = runRelease($repo);
 
     expect($run['code'])->toBe(1)
-        ->and($run['err'])->toContain('v8')
+        ->and($run['err'])->toContain('the tag 8 already exists')
         ->and(repoState($repo))->toBe($before);
 })->with(['here' => [false], 'on origin' => [true]]);
 
@@ -318,7 +328,7 @@ it('changes nothing on a dry run, and says what it would do (12)', function (): 
     $run = runRelease($repo, ['--dry-run']);
 
     expect($run['code'])->toBe(0, $run['err'])
-        ->and($run['out'])->toContain('v8')
+        ->and($run['out'])->toContain('Would release 8 with')
         ->and($run['out'])->toContain('- A thing.')
         ->and(repoState($repo))->toBe($before)
         ->and($run['gh'])->not->toContain('release create');

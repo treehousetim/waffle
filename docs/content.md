@@ -187,8 +187,8 @@ failed job in production, so the Queue page shows it.
 `repository_dispatch` needs the Contents permission, which can also push. The
 token lives in the app, which faces the internet, so the site's repository
 must not let a push alone change what deploys: protect the default branch
-(require a pull request, so the token cannot push to it) and protect `v*`
-tags with a ruleset (only maintainers may create, move or delete them). With
+(require a pull request, so the token cannot push to it) and protect every
+tag with a ruleset (only maintainers may create, move or delete them). With
 both, a stolen token can at most ask for a rebuild of what is already
 released. `SITE_REPOSITORY` ships
 empty in `docker-compose.prod.yml`; a project with a site writes its own there.

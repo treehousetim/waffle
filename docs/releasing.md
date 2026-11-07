@@ -13,7 +13,7 @@ place a version is written. It has one of two shapes:
 - **An app: one number,** `1`, `2`, `3`. Each release is one deploy, nothing
   depends on an app's API, and so a compatibility promise like semver's has
   no audience; the number counts releases. `0` means never released. Tags are
-  `v1`, `v2`, and only those deploy.
+  the number alone, `1`, `2`, and only those deploy.
 - **[treehousetim/waffle](https://github.com/treehousetim/waffle) itself: semver,** `0.1.0`, because
   `composer create-project` and Packagist read it. For a starting point,
   "breaking" means a project porting the change has work to do: **major** for

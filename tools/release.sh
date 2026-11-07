@@ -80,7 +80,7 @@ elif [[ "$CURRENT" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; th
 else
     die "VERSION holds '${CURRENT}', which is neither an app's release number (e.g. 7) nor the framework's semver (e.g. 0.4.2)."
 fi
-TAG="v${NEXT}"
+TAG="${NEXT}"
 
 if [ "$PRINT_NEXT" -eq 1 ]; then
     printf '%s\n' "$NEXT"

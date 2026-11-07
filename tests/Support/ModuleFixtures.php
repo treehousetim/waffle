@@ -154,7 +154,7 @@ final class ModuleFixtures
         $app = $base . '/app';
         mkdir($app . '/tools', 0o777, true);
         file_put_contents($app . '/VERSION', "3\n");
-        file_put_contents($app . '/CHANGELOG.md', "# Changelog\n\nStarted from [treehousetim/waffle v{$waffle}](https://github.com/treehousetim/waffle/releases/tag/v{$waffle}).\n\n## [Unreleased]\n");
+        file_put_contents($app . '/CHANGELOG.md', "# Changelog\n\nStarted from [treehousetim/waffle {$waffle}](https://github.com/treehousetim/waffle/releases/tag/{$waffle}).\n\n## [Unreleased]\n");
         file_put_contents($app . '/AGENTS.md', "# AGENTS.md\n\n## 2. Stack\n\n| HTTP client (PHP) | Guzzle, `guzzlehttp/guzzle` ^8.1 |\n\n## 3. Directory layout\n\nmentions some/unapproved here, outside section 2\n");
         file_put_contents($app . '/composer.json', "{}\n");
 

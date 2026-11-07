@@ -26,6 +26,13 @@ it("reads Waffle's own semver VERSION", function (): void {
     expect(WaffleVersion::of($this->base))->toBe('0.4.0');
 });
 
+it('reads the line whether or not its version carries a v', function (): void {
+    file_put_contents($this->base . '/VERSION', "3\n");
+    file_put_contents($this->base . '/CHANGELOG.md', "Started from [treehousetim/waffle v0.2.0](https://github.com/treehousetim/waffle/releases/tag/v0.2.0).\n");
+
+    expect(WaffleVersion::of($this->base))->toBe('0.2.0');
+});
+
 it('refuses when it cannot tell (32)', function (): void {
     file_put_contents($this->base . '/VERSION', "3\n");
     file_put_contents($this->base . '/CHANGELOG.md', "Started from [treehousetim/waffle](https://github.com/treehousetim/waffle).\n");
@@ -36,5 +43,5 @@ it('refuses when it cannot tell (32)', function (): void {
 
 it('agrees with the line the rename writes', function (): void {
     expect((string) file_get_contents(dirname(__DIR__, 3) . '/tools/rename-project.sh'))
-        ->toContain('ORIGIN_LINE="Started from [treehousetim/waffle v${STARTED_FROM}]');
+        ->toContain('ORIGIN_LINE="Started from [treehousetim/waffle ${STARTED_FROM}]');
 });
