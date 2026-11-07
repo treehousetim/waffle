@@ -77,7 +77,7 @@ can run Docker and so is as good as root. Everything here protects that file:
   frontend's source, the build with no network, and only `index.html` and
   `assets/` come out (AGENTS.md §8). The rest of the tree is the tag's own,
   and composer runs no package's code.
-- **Which tag.** A tag ruleset lets only the owner create, move or delete a tag
+- **Which tag.** Once others can push, a tag ruleset lets only the owner create, move or delete a tag
   (docs/accounts.md), and the poller refuses a release older than live or
   published by someone not in `DEPLOY_AUTHORS`.
 - **What is on disk.** A release kept on disk is checked against the list of

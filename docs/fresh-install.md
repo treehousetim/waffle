@@ -80,7 +80,9 @@ stays open for good: Let's Encrypt validates over it, and the front Caddy
 redirects everything else on it to HTTPS. Password logins stay off: the droplet is made
 with a key, and only keys open it.
 
-**8. Install what the deploy needs**, as root:
+**8. Harden it, then install what the deploy needs**, as root. First
+everything in docs/hardening.md: the cloud firewall, SSH by key only, daily
+security updates, swap and log limits. Then:
 
 - Docker Engine and the Compose plugin from Docker's own apt repository
   (https://docs.docker.com/engine/install/debian/). Compose **v2.24 or later**

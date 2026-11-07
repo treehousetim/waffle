@@ -52,12 +52,17 @@ the same way, with these differences:
   repository a notice).
 - Paste it into Doppler `prod` as `SITE_DISPATCH_TOKEN`.
 
-**Protect `main`** (Settings → Branches): pull requests required.
+**Once anyone else can push to the repository**, protect what deploys
+(Settings → Rules → Rulesets; on a private repository rulesets need GitHub
+Pro or a paid organization):
 
-**Protect the release tags** (Settings → Rules → Rulesets → New tag ruleset):
-target every tag (`~ALL`), restrict creations, updates and deletions, and add
-yourself to the bypass list. Only you can then make, move or delete a tag, and
-a release's tag is what deploys.
+- a branch ruleset for `main`: pull requests required, with you on the bypass
+  list so `./tools/release.sh` can still push;
+- a tag ruleset for every tag (`~ALL`): creations, updates and deletions
+  restricted, with you on the bypass list. A release's tag is what deploys.
+
+While you are the only one with access, neither is needed: the poller deploys
+only a release you published, whose files GitHub Actions uploaded.
 
 ## Doppler
 
