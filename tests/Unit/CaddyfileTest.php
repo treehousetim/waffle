@@ -27,7 +27,7 @@ function caddyBlock(string $conf, string $header): string
 
     $start = $match[0][1];
     // The block's own brace ends the match; a header can hold braces of its
-    // own, as `{$SITE_ADDRESS}` does.
+    // own, as `http://{$SITE_ADDRESS}` does.
     $open = $start + strlen($match[0][0]) - 1;
     $depth = 0;
 
@@ -90,7 +90,7 @@ it('sets a content security policy that allows only the app\'s own code to run (
 });
 
 it('puts the headers on every response of the site, error responses included (12)', function (): void {
-    $site = caddyBlock(caddyfile(), '{$SITE_ADDRESS}');
+    $site = caddyBlock(caddyfile(), 'http://{$SITE_ADDRESS}');
 
     expect($site)->toContain('import security_headers')
         ->and(caddyBlock($site, 'handle_errors'))->toContain('import security_headers');
@@ -102,7 +102,7 @@ it('routes in a fixed order: cron refused, dotfiles refused, assets, then PHP (1
      * rules, and the order is the security: a dotfile must be refused before
      * anything can serve it.
      */
-    $route = caddyBlock(caddyBlock(caddyfile(), '{$SITE_ADDRESS}'), 'route');
+    $route = caddyBlock(caddyBlock(caddyfile(), 'http://{$SITE_ADDRESS}'), 'route');
     $order = [
         'respond /cron/* 404',
         'respond @dotfiles 404',
@@ -126,19 +126,19 @@ it('routes in a fixed order: cron refused, dotfiles refused, assets, then PHP (1
 });
 
 it('refuses every path with a dotted segment (14)', function (): void {
-    expect(caddyBlock(caddyfile(), '{$SITE_ADDRESS}'))->toMatch('#@dotfiles path_regexp /\\\\\.#');
+    expect(caddyBlock(caddyfile(), 'http://{$SITE_ADDRESS}'))->toMatch('#@dotfiles path_regexp /\\\\\.#');
 });
 
 it('caches only the hashed assets, and those forever (13)', function (): void {
     $conf = caddyfile();
-    $assets = caddyBlock(caddyBlock($conf, '{$SITE_ADDRESS}'), 'handle /assets/*');
+    $assets = caddyBlock(caddyBlock($conf, 'http://{$SITE_ADDRESS}'), 'handle /assets/*');
 
     expect($assets)->toContain('Cache-Control "public, max-age=31536000, immutable"')
         ->and(substr_count($conf, 'immutable'))->toBe(1);
 });
 
 it('caps request bodies at 2 MB (15)', function (): void {
-    expect(caddyBlock(caddyBlock(caddyfile(), '{$SITE_ADDRESS}'), 'request_body'))->toContain('max_size 2MB');
+    expect(caddyBlock(caddyBlock(caddyfile(), 'http://{$SITE_ADDRESS}'), 'request_body'))->toContain('max_size 2MB');
 });
 
 it('serves /cron on its own port to this machine and its containers only (16)', function (): void {
@@ -163,29 +163,44 @@ it('serves plain HTTP locally and never asks for a certificate (10)', function (
         ->toContain('"${HTTP_PORT:-8080}:80"');
 });
 
-it('names the production hostname once, and the workflow agrees with it (11)', function (): void {
+it('names the production hostname once, as a bare hostname (11)', function (): void {
     preg_match_all('/SITE_ADDRESS: ([^\n]+)/', composeFile('docker-compose.prod.yml'), $addresses);
-    preg_match('#url: https://([^\s/]+)#', composeFile('.github/workflows/deploy.yml'), $url);
 
     expect($addresses[1])->toHaveCount(1)
-        // A bare hostname: deploy.sh reads this line to check DNS.
-        ->and($addresses[1][0])->toMatch('/^[a-z0-9.-]+\.[a-z]+$/')
-        ->and($url[1] ?? null)->toBe($addresses[1][0]);
+        // A bare hostname: deploy.sh reads this line to check DNS and HTTPS.
+        ->and($addresses[1][0])->toMatch('/^[a-z0-9.-]+\.[a-z]+$/');
 });
 
-it('publishes 80 and 443 to the world and the cron port to loopback only (16)', function (): void {
+it('publishes only the cron port, to loopback: the server\'s front Caddy has 80 and 443 (16; docs/edge.md, 1)', function (): void {
     preg_match_all('/^\s+- "([^"]+)"$/m', composeService(composeFile('docker-compose.prod.yml'), 'caddy'), $ports);
 
-    expect(array_values(array_filter($ports[1], static fn (string $p): bool => !str_contains($p, '/data') && !str_contains($p, '/config') && !str_contains($p, 'Caddyfile') && !str_contains($p, '/var/www'))))
-        ->toBe(['80:80', '443:443', '443:443/udp', '127.0.0.1:8081:8081']);
+    expect($ports[1])->toBe(['127.0.0.1:8081:8081'])
+        ->and(composeService(composeFile('docker-compose.prod.yml'), 'caddy'))->toContain('ports: !override');
 });
 
-it('keeps the certificate store in a named volume that a deploy cannot wipe (7)', function (string $file): void {
-    $compose = composeFile($file);
+it('serves plain HTTP for its hostname only, behind the front Caddy, which holds the certificate (10, 11; docs/edge.md, 1)', function (): void {
+    expect(caddyfile())->toMatch('/^http:\/\/\{\$SITE_ADDRESS\} \{$/m')
+        ->and(composeService(composeFile('docker-compose.prod.yml'), 'caddy'))->not->toContain('caddy_data')
+        ->and(composeService(composeFile('docker-compose.yml'), 'caddy'))->not->toContain('caddy_data');
+});
 
-    expect(composeService($compose, 'caddy'))->toContain('- caddy_data:/data')
-        ->and($compose)->toMatch('/^volumes:\n(?:  .*\n)*  caddy_data:/m');
-})->with(['docker-compose.yml', 'docker-compose.prod.yml']);
+it('trusts forwarded addresses only from private networks, and gives PHP the visitor\'s (docs/edge.md, 2)', function (): void {
+    $site = caddyBlock(caddyfile(), 'http://{$SITE_ADDRESS}');
+
+    expect(caddyfile())->toMatch('/^\{\n\tservers \{\n\t\ttrusted_proxies static private_ranges\n\t\}\n\}$/m')
+        ->and(caddyBlock($site, 'php_fastcgi php:9000'))->toContain('env REMOTE_ADDR {client_ip}')
+        // The cron gate is the connection's own address, never a forwarded one.
+        ->and(caddyBlock(caddyfile(), 'http://:8081'))->toContain('@outside not remote_ip ');
+});
+
+it('joins the front Caddy\'s network under the slug, and only Caddy does (docs/edge.md, 3)', function (): void {
+    $prod = composeFile('docker-compose.prod.yml');
+
+    expect(composeService($prod, 'caddy'))->toMatch('/networks:\n      default:\n      edge:\n        aliases: \[waffle\]/')
+        ->and($prod)->toMatch('/^networks:\n  edge:\n    external: true$/m')
+        ->and(composeService($prod, 'php'))->not->toContain('edge')
+        ->and(composeService($prod, 'db'))->not->toContain('edge');
+});
 
 it('leaves nothing of nginx behind', function (): void {
     expect(is_dir(dirname(__DIR__, 2) . '/docker/nginx'))->toBeFalse()

@@ -189,7 +189,7 @@ Site's docs/data-pages.md).
 Originals are kept in object storage, behind `StoragePort`, and handed to the
 site's build by a short-lived signed URL; the site resizes them and serves
 its own copies. Nothing on the public site links to the app's storage. The
-storage credentials live in Doppler (`prod-serve`), like every secret.
+storage credentials live in Doppler (`prod`), like every secret.
 
 ### `form_submissions`: what the site's forms send
 

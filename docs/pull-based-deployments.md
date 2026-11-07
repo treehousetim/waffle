@@ -1,245 +1,161 @@
 # Pull-based deploys from GitHub Releases
 
-**Status: proposal, not built.** Today a release is pushed: GitHub Actions
-rsyncs the tree to the server over SSH and runs `deploy/deploy.sh`
-(docs/releasing.md). This is the other way round: the server pulls each
-release itself, migrates the database, switches atomically, checks health and
-rolls back on failure, and CI never has any access to the server.
+How a release reaches the server. Nothing pushes to it: the server checks
+GitHub every minute, and when there is a newer release it pulls it, checks it,
+migrates the database, switches to it atomically, checks it is healthy, and
+switches back if it is not. CI never has any access to the server.
 
-The stack does not change: Docker Compose, Caddy in front (docs/https.md),
-PHP-FPM and the queue worker behind it, MariaDB, and Doppler as the only
-source of secrets. Waffle Site's static releases follow the same pattern
-("The site", below).
+`<slug>` below is the project's slug (`waffle` here), and `/opt/<slug>` its
+directory on the server.
 
 ## Overview
 
 ```
-developer ──./tools/release.sh──▶ GitHub Release vN
-                              │  CI builds and attaches <slug>-vN.tar.gz + .sha256
-                              ▼
-server: systemd timer (every minute) ──▶ waffle-deploy check
-   ├─ guards: newer than live? approved author? assets uploaded? checksum OK?
-   ├─ unpack to  /opt/<slug>/releases/vN/
-   ├─ validate the release's Caddyfile; rebuild the php image if docker/ changed
-   ├─ worker stopped; phinx migrate from the new release, under doppler run
-   ├─ atomic switch: /opt/<slug>/current → releases/vN, containers recreated from it
-   ├─ health check over loopback; HTTPS checked for the hostname
-   └─ on failure: current back to the previous release, containers recreated, alert
+./tools/release.sh ──▶ GitHub Release vN
+                          │  deploy.yml builds it and attaches <slug>-vN.tar.gz + .sha256
+                          ▼
+server: <slug>-deploy.timer, every minute ──▶ <slug>-pull check   (deploy/pull.sh)
+   ├─ guards: vN? newer than live? approved publisher? both files attached? checksum?
+   ├─ unpack into /opt/<slug>/releases/vN, then run that release's deploy/deploy.sh:
+   │    ├─ complete? Doppler readable? DNS here? Caddyfile valid? images rebuilt if docker/ changed
+   │    ├─ queue worker stopped; migrations from the new release, the old one still serving
+   │    ├─ /opt/<slug>/current → releases/vN; php, worker and Caddy recreated from it
+   │    ├─ /cron/health says the database is ok and names this release's newest migration;
+   │    │  HTTPS answers with a valid certificate
+   │    └─ if not: current back to the previous release, its containers recreated
+   └─ alert on any failure or refusal; keep the newest releases, prune the rest
 ```
 
-**Nothing pushes to the server.** CI only publishes files to the release, with
-the workflow's own `GITHUB_TOKEN`. The server needs one read-only GitHub token,
-kept in Doppler like every other secret.
+## The pieces
 
-## What changes from today
-
-| Today | Pull-based |
+| Piece | What it is |
 | --- | --- |
-| `deploy.yml`: a `build` job, then a `ship` job that rsyncs over SSH | `build` only: it attaches the tarball and its checksum to the release. The `ship` job is gone. |
-| Doppler `prod-deploy`: `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY`, `DROPLET_SSH_KNOWN_HOSTS`, `DEPLOY_ALERT_WEBHOOK` | **Gone.** Nothing outside connects to the server, so it holds no deploy key and no known hosts. The alert moves to the server. |
-| GitHub `prod` environment holding `DOPPLER_TOKEN` | No secret at all; `tools/setup-github.sh` keeps only the `v*` tag rule. |
-| One tree at `/opt/<slug>`, replaced by `rsync --delete` | `/opt/<slug>/releases/vN/`, one per release, and `current` linking to the live one. |
-| A GitHub read credential is never on the server | One fine-grained token, **read-only, on this repository only**, used to fetch release files, never source. |
-| `deploy.sh` run by the workflow | The same steps, run by `waffle-deploy` on the server, from the release it is installing. |
+| `.github/workflows/deploy.yml` | On `release: published`: the `build` job (read-only) builds the frontend in containers that see only its source (the build offline), builds `vendor/`, audits both and packs the tree; the `attach` job, the only one that can write and which runs no package manager, uploads `<slug>-vN.tar.gz` and its `.sha256` to the release. No secrets. |
+| `deploy/pull.sh` | The poller, installed by hand as `/usr/local/sbin/<slug>-pull`: `check`, `deploy <tag>`, `status`, `retry`. |
+| `deploy/systemd/<slug>-deploy.service` + `.timer` | Run `<slug>-pull check` every minute as the `deploy` user. The service holds the settings: `APP_ROOT`, `SLUG`, `REPO`, `DEPLOY_AUTHORS`, `KEEP`. None is secret. |
+| `deploy/deploy.sh` | Inside each release: brings that release into service, as above. The poller runs the new release's copy, so the deploy logic is always the new release's. |
+| `/opt/<slug>/releases/vN/` | One directory per release. The newest `KEEP` (5) stay, and always the live and previous ones. |
+| `/opt/<slug>/current` | The link to the live release. The crontab and the backup use this path. |
+| `/opt/<slug>/shared/` | What outlives releases and is not a volume: `deploy/` (state, the lock, the cron header file, logs) and `backups/`. |
+| Named volumes | `db_data` (the database) and `storage_data` (uploads). The Compose project is named for the slug, so every release shares them. The certificates are the front Caddy's, in `/opt/edge` (docs/edge.md). |
 
-## Secrets: Doppler on the server, no env files
+The poller, the units, Docker, Doppler and the firewall are **server config**:
+installed by hand (docs/fresh-install.md, steps 8–10) and never changed by a
+release. When a release carries a newer `deploy/pull.sh` than the installed
+one, its deploy says so, with the command to install it. The project's own
+Caddyfile and Compose files ship with each release, are validated before the
+switch, and switch back with it.
 
-There is still no `.env` file anywhere, and nothing secret is written to disk.
+## Secrets
 
-- **The server keeps its Doppler service token for `prod-serve`**, scoped to
-  `/opt/<slug>` (`doppler configure set token … --scope /opt/<slug>`), which
-  covers every release under it. Every Compose call runs under
-  `doppler run --`, as today, so secrets reach the containers' environment and
-  nowhere else.
-- **The deploy's own secrets are keys in `prod-serve` that no container
-  receives**, read with `doppler secrets get --plain` the way `deploy.sh`
-  reads `CRON_SECRET` today: `GITHUB_RELEASES_TOKEN` (the read-only token) and
-  the alert target. A container only sees the keys its Compose `environment:`
-  block names, and neither is named there.
-- **Settings that are not secret** live in `/etc/waffle-deploy/<slug>.conf`:
-  `REPO`, `DEPLOY_AUTHORS`, `KEEP`, the hostname to check. It holds no token.
-- **Migrations run as the app's own database user**, as today. A separate
-  migration user is possible later (its own keys in `prod-serve`, read only by
-  the migrate step), but it is not needed to adopt this.
+All in Doppler's `prod`, read by the deploy user's service token scoped
+to `/opt/<slug>` (which covers every release under it). There is no `.env`
+file, and CI holds no secret.
 
-## Components
+- **`GITHUB_RELEASES_TOKEN`**: a fine-grained GitHub token that can read this
+  repository's contents and change nothing (docs/accounts.md). The poller uses
+  it to see the latest release and download its two files. It reaches `curl`
+  through a file only the deploy user can read, removed when the run ends,
+  never through `curl`'s arguments.
+- **`DEPLOY_ALERT_WEBHOOK`** (optional): a Slack incoming-webhook URL, passed
+  to `curl` on its standard input. Every refusal and failure is also in the
+  journal (`journalctl -u <slug>-deploy`).
+- The app's own secrets reach its containers through `doppler run` exactly as
+  before. The two keys above are named in no Compose `environment:` block, so
+  no container receives them.
 
-| Piece | Purpose |
-| --- | --- |
-| GitHub Release + `deploy.yml`'s `build` job | The deploy unit. CI builds the tree the way it does today (`vendor/` with `--no-dev`, the frontend in `src/public`), then attaches `<slug>-vN.tar.gz` and `<slug>-vN.tar.gz.sha256`. |
-| `/usr/local/sbin/waffle-deploy` | The deploy script, with `check`, `deploy <tag>`, `rollback`, `status` and `retry`. Installed from the repository's `deploy/` by hand (Conventions). |
-| `waffle-deploy@<slug>.timer` + `.service` | Runs `waffle-deploy check <slug>` every minute (`OnUnitActiveSec=1min`, `OnBootSec=2min`). One instance per project, so an app and its site on one droplet deploy independently. |
-| `/etc/waffle-deploy/<slug>.conf` | The settings above; nothing secret. |
-| `/opt/<slug>/releases/vN/` | One directory per release, owned by `deploy`. |
-| `/opt/<slug>/current` | The link to the live release. Compose, cron and the backup script always use this path. |
-| `/opt/<slug>/shared/` | What survives releases and is not a named volume: the MariaDB data directory, `.deploy/` (the deploy's state and the cron header file), `backups/`. |
+## What is trusted
 
-The named volumes (`caddy_data`, the certificate store; `storage_data`,
-uploads) already outlive every release, because the Compose project is named
-for the slug, not for the folder it runs from.
+The server runs whatever is in the release tarball, as the deploy user, who
+can run Docker and so is as good as root. Everything here protects that file:
 
-## The `check` flow
+- **Who built it.** The poller deploys only files the workflow's own bot
+  (`github-actions[bot]`) uploaded, so a person with write access cannot slip
+  in their own tarball and checksum before CI's are attached. The checksum
+  only catches a damaged download: it comes from the same place.
+- **What built it.** In CI, npm runs only in containers that see the
+  frontend's source, the build with no network, and only `index.html` and
+  `assets/` come out (AGENTS.md §8). The rest of the tree is the tag's own,
+  and composer runs no package's code.
+- **Which tag.** A tag ruleset lets only the owner create or move a `v` tag
+  (docs/accounts.md), and the poller refuses a release older than live or
+  published by someone not in `DEPLOY_AUTHORS`.
+- **What is on disk.** A release kept on disk is checked against the list of
+  files and checksums it was unpacked with before it is deployed again, and
+  the app's containers mount it read-only.
 
-1. **Find the latest release** through the GitHub API. If it is already live,
-   exit quietly.
-2. **Guards.** Refuse, log and alert once per tag, deploying nothing, if any
-   of these fail:
-   - **Newer than live:** compare version numbers (`v12` after `v9`), not
-     dates, so an old tag marked "latest" again cannot roll the server back.
-   - **Approved author:** the release's publisher is in `DEPLOY_AUTHORS`.
-   - **Assets present:** the tarball and its `.sha256` are both uploaded. If
-     not, wait without failing, and alert once if they are still missing after
-     N minutes (CI attaches them a few minutes after the release is published).
-   - **Checksum:** the tarball matches its `.sha256`.
-   - **Complete:** the unpacked tree has `vendor/autoload.php` and
-     `src/public/assets`, as `deploy.sh` requires today.
-   - **Single run:** a lock file; a timer tick during a deploy is skipped.
-   - **No retry loop:** a tag that failed is not tried again until a newer
-     release appears or someone runs `retry`.
-3. **Unpack** into `releases/vN.partial`, then rename it to `releases/vN`, with
-   `--no-same-owner`, owned by `deploy`.
-4. **Check the release's server config before anything stops:** `caddy validate`
-   against the new Caddyfile, and the php image rebuilt only if the hash of
-   `docker/` changed, as `deploy.sh` does today. Either failing stops here,
-   with the old release still serving.
-5. **Migrate.** Stop the queue `worker` (it finishes the job in hand, within its
-   grace period), then run `phinx migrate -e production` from the new release,
-   under `doppler run`. **If migrations fail, stop: the old release stays live**
-   and the worker starts again on it.
-6. **Switch atomically**, then recreate the containers from it:
-   ```bash
-   ln -sfn "releases/$tag" "$APP/current.next" && mv -fT "$APP/current.next" "$APP/current"
-   doppler run -- docker compose --project-directory "$APP/current" \
-     -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate php worker caddy
-   ```
-   A running container keeps the directory it was started with, so restarting
-   is not enough: `php`, `worker` and `caddy` are recreated, which also clears
-   OPcache. `db` is not touched.
-7. **Long-running jobs** are the queue `worker`, already restarted from
-   `current` in step 6. Cron calls the app over `127.0.0.1:8081`, so it needs no
-   restart; the crontab is rendered again from the new release, as today.
-8. **Health check, over loopback:** `GET http://127.0.0.1:8081/cron/health`
-   with the cron header file. Require **HTTP 200, `"success":true`,
-   `"database":"ok"`, and `"migration"` equal to the newest migration in the
-   new release**, so an error page, or a release whose migrations did not run,
-   fails. Then the HTTPS check `deploy.sh` makes today: a valid certificate for
-   the hostname.
-9. **Roll back on failure:** `current` back to the previous release, the same
-   containers recreated, and an alert. **Code rolls back, the schema does
-   not**, which is why migrations only ever expand (AGENTS.md §6).
-10. **Prune.** Keep the newest `KEEP` releases, plus whatever is live or
-    previous.
-
-## The site
-
-Waffle Site already deploys this way on the server: `releases/vN/`, `current`
-switched by a rename, Caddy serving `/srv/site/current`, and an instant switch
-back if the new release is not being served. Pull-based changes only how a
-release arrives:
-
-- **Its `build` job attaches `<slug>-vN.tar.gz` (the built `dist/`) and its
-  `.sha256`** to the release; no `ship` job, and no SSH.
-- **Nothing is recreated:** Caddy serves through the `current` link, so the
-  switch alone is the deploy. A changed Caddyfile is validated and reloaded,
-  as today.
-- **Scoped rebuilds** (a change notice from the app) become releases too: the
-  rebuild workflow publishes `vN.dRUN` with its tarball, and `check` orders it
-  after `vN`. Their publisher is the workflow (`github-actions[bot]`), allowed
-  in `DEPLOY_AUTHORS` for `.d` releases only.
-- **Health** is the check `deploy.sh` makes today: the hostname serves the new
-  release's version over HTTPS.
-
-## One droplet, two hostnames
-
-With the app and the site on one server (docs/setups.md, "One server"), each
-has its own timer instance, its own `/opt/<slug>`, and its own Caddy behind
-the edge Caddy that holds both certificates. The edge is server config: it is
-not part of either project's release (Conventions).
-
-## Manual commands
+## Commands on the server
 
 | Command | Use |
 | --- | --- |
-| `waffle-deploy deploy <slug> <tag>` | Deploy a specific tag. **Not guarded**, so a deliberate redeploy or rollback to an older tag still works. |
-| `waffle-deploy rollback <slug>` | `current` back to the previous release, containers recreated (code only). |
-| `waffle-deploy status <slug>` | Live and previous release, lock state, last result. |
-| `waffle-deploy retry <slug>` | Forget the last failure, so `check` tries again. |
+| `<slug>-pull status` | Live, previous, failed and held releases, the lock, what is kept. |
+| `<slug>-pull deploy vN` | Deploy one tag, older ones included: **the rollback**. It holds the server there until a newer release is published, or `retry`. It is not guarded by "newer than live" or the publisher, only by the checksum. Releases still on disk deploy without downloading. |
+| `<slug>-pull retry` | Forget a failed release and a hold, so the next tick deploys the latest again. |
+| `journalctl -fu <slug>-deploy` | Watch a deploy. |
 
-Run manual deploys under `tmux` or `systemd-run --unit=waffle-deploy-manual …`,
-so a dropped SSH session cannot stop a migration halfway: MariaDB commits each
-DDL statement on its own.
+Run a manual deploy under `tmux`, or `systemd-run --unit=<slug>-deploy-manual
+--uid=deploy <slug>-pull deploy vN`, so a dropped SSH session cannot stop a
+migration halfway: MariaDB commits each DDL statement on its own.
 
-## Conventions that make it work
-
-- **Everything references `current`.** Compose runs with
-  `--project-directory /opt/<slug>/current`; the crontab and
-  `tools/backup-prod-db.sh` use the same path.
-- **Nothing that must survive a release lives inside one.** The MariaDB data
-  directory moves out of the tree: `docker-compose.prod.yml` mounts
-  `/opt/<slug>/shared/mysql` instead of `./docker/data/mysql`. Inside a
-  release it would be a new, empty database on every deploy.
-- **The project's own server config ships with the release**: its Caddyfile
-  and Compose files are validated before the switch and rolled back with it.
-  **The host's config does not**: systemd units, the timer, the firewall,
-  Docker, the Doppler CLI and token, and the edge Caddy on a shared droplet
-  are installed by hand from the reference copies in `deploy/`, with a backup
-  and a line in a server-side `CHANGES.md`.
-- **The health endpoint** is `/cron/health`: cheap, on the loopback-only port,
-  and it reaches the database.
-- **Alerts:** every failure or refusal goes to the alert channel, the one the
-  advisory check uses (docs/supply-chain.md, OPEN-QUESTIONS.md); successes are
-  logged to the journal.
-- **Never patch a live release in place** (AGENTS.md §9): fix it in the
-  repository and release. If an emergency ever forces it, open a PR with the
-  identical change at once and compare file checksums before the next
-  release, or the next deploy silently reverts the fix.
+**Code rolls back; the schema does not.** That is why migrations only add,
+never rename or drop, in the same release (AGENTS.md §6): for a few seconds
+during every deploy the previous release runs against the new schema, and
+after a rollback it does so for good.
 
 ## Failure list
 
-1. The GitHub API is unreachable or rate-limited: `check` exits and tries on
-   the next tick; alert after an hour of failures.
-2. A release is published without assets, or they are still uploading: wait,
-   alert once after N minutes.
-3. The checksum does not match: refuse, alert, keep the files for inspection.
-4. The release is older than live, or its publisher is not approved: refuse,
-   alert once.
-5. The unpacked tree is incomplete: refuse before anything stops.
-6. The new Caddyfile does not validate, or the image does not build: stop with
-   the old release serving.
-7. A migration fails: stop, the old release stays live, the worker restarts on
-   it.
-8. The health check or the HTTPS check fails after the switch: roll back,
-   alert.
-9. A second tick starts during a deploy: the lock skips it.
-10. Doppler is unreachable: nothing starts; `check` alerts and tries again.
-11. The server reboots mid-deploy: a `.partial` directory is removed on the
-    next run, and `current` is still a whole release, because the switch is a
-    rename.
-12. The disk fills: prune runs before unpacking; refuse with an alert if
-    there is still no room.
+Each has a test in `tests/Unit/PullTest.php`, which runs `deploy/pull.sh`
+against stand-ins for GitHub and Doppler. The order of `deploy/deploy.sh`
+is asserted in `tests/Unit/DeployScriptsTest.php`.
 
-## To build
+1. GitHub is unreachable, answers an error, or answers something that is not a
+   release: nothing changes and the tick fails; it is reported once it has
+   lasted `API_ALERT_MINUTES` (60), never read as "nothing to do".
+2. No release has been published yet: nothing to do.
+3. The latest release's tag is not `vN`: refused, reported once.
+4. The latest release is the one live: nothing to do, quietly.
+5. The latest release is older than the one live (an old tag marked latest
+   again): refused, reported once. Versions compare as numbers, so `v10` is
+   newer than `v9`.
+6. The release was published by someone not in `DEPLOY_AUTHORS`: refused,
+   reported once.
+7. The release's files are not attached yet, or still uploading: wait without
+   failing; reported once if still missing after `ASSET_WAIT_MINUTES` (15).
+8. The tarball does not match its checksum: refused, nothing kept, reported
+   once. This holds for a named `deploy vN` too.
+9. The unpacked tree is incomplete: refused before anything stops.
+10. A tick starts while a deploy runs: the lock skips it.
+11. A release that failed is not retried on every tick: only after `retry`, or
+    when a newer release appears.
+12. The release's deploy fails: its tag is recorded, it is reported, and the
+    previous release is serving (deploy.sh switched back, or never switched).
+13. The release token is missing, or Doppler cannot be read: nothing is
+    fetched; reported once.
+14. A run was interrupted halfway through unpacking: the half-unpacked
+    directory is removed before unpacking again. `current` is always a whole
+    release, because it moves by a rename.
+15. The disk fills with releases: the newest `KEEP` stay, and always the live
+    and previous ones.
+16. The release token or the alert webhook appears on a command line, or the
+    token is left on disk.
+17. The release's files were uploaded by someone other than the workflow's
+    bot: refused, reported once.
+18. A release on disk has changed since it was unpacked (a file edited, added
+    or removed): refused, reported once. Removing its directory downloads it
+    again.
+19. The poller is run as anyone but the deploy user: refused before it
+    touches anything, so its lock and state stay the deploy user's.
+20. A rollback by name is undone by the next tick: after `deploy vN`, the
+    server holds there until a release newer than what was latest is
+    published, or `retry`. A rollback while GitHub cannot be read holds
+    whatever the first check after it finds.
 
-- `deploy/waffle-deploy`, the systemd units and the conf template in the
-  repository, with tests against stand-in `gh`, `curl`, `docker` and `doppler`
-  for every item in the failure list, written first (AGENTS.md §7)
-- the `build` job attaching the tarball and checksum; the `ship` job, the
-  `prod-deploy` config and the `prod` environment's token removed
-- `/opt/<slug>/shared/` for the MariaDB data, `.deploy/` and `backups/`, and a
-  one-time move from today's layout
-- docs/fresh-install.md and docs/releasing.md rewritten for it, and AGENTS.md
-  §8 and §9 (the read-only release token on the server)
-- the same in Waffle Site, plus the scoped rebuild as a `.d` release
+A tag that is not `vN` is never repeated in an alert, and alerts are escaped
+for Slack, so a crafted tag cannot post a link or mention a channel.
 
-## Adapting to a new project
-
-1. Create the `deploy` user, `/opt/<slug>/{releases,shared}`, and the Doppler
-   token scoped to `/opt/<slug>`.
-2. Put `GITHUB_RELEASES_TOKEN` (fine-grained, read-only on this repository)
-   and the alert target in `prod-serve`.
-3. Install `waffle-deploy`, the timer and service units, and
-   `/etc/waffle-deploy/<slug>.conf` (`REPO`, `DEPLOY_AUTHORS`, `KEEP`, the
-   hostname), from `deploy/`.
-4. Enable `waffle-deploy@<slug>.timer`.
-5. Publish a release with `./tools/release.sh` and watch
-   `journalctl -u waffle-deploy@<slug>` and `waffle-deploy status <slug>`.
+And in `deploy/deploy.sh`, before `current` moves: an incomplete release,
+Doppler unreadable, `CRON_SECRET` missing, DNS wrong on a first deploy, a
+Caddyfile that does not load, the database not healthy, or a migration that
+fails all stop with the previous release still serving. After it moves:
+php-fpm not starting, `/cron/health` not healthy or naming another migration,
+or HTTPS not serving a valid certificate all switch back.

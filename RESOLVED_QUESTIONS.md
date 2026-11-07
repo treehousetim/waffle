@@ -68,17 +68,16 @@ the same events. The design and failure list are in docs/queue.md.
 
 ## Where do secrets live?
 
-**Resolved by the template:** Doppler, and only Doppler — local and production —
-with two configs, named for who reads them, that inherit nothing from each
-other: `prod-serve` (the server) and `prod-deploy` (GitHub Actions). Until
-2026-10-12 there were three (`dev`, `prd`, `prod-deploy`); `dev` held nothing
-the compose defaults did not, so it went, along with `doppler.yaml`, and `prd`
-was renamed. A `dev` comes back when a feature first needs a local key. There is no `.env` file anywhere. Tests read the committed
-`.env.testing`, which holds no secrets. AGENTS.md §8.
+**Resolved by the template:** Doppler, and only Doppler, with one production
+config, `prod`, read by the server. CI holds no secret. A `dev` config
+comes when a feature first needs a local key. There is no `.env` file anywhere.
+Tests read the committed `.env.testing`, which holds no secrets. AGENTS.md §8.
 
 ## How is the app deployed?
 
-**Resolved by the template:** GitHub Actions on `release: published`, gated by a
-`v*` tag policy on the `prod` environment, builds the frontend and `vendor/` on
-the runner and rsyncs one tested tree to the server, where `deploy/deploy.sh`
-brings it into service. Nothing is cloned on the server. AGENTS.md §9.
+**Resolved by the template:** the server pulls it. GitHub Actions on
+`release: published` builds the frontend and `vendor/` and attaches the release
+as a tarball and its checksum; the server checks GitHub every minute, and pulls,
+checks and deploys a newer release itself, switching back if it is not
+healthy. Nothing in CI can reach the server, and nothing is cloned on it.
+AGENTS.md §9, docs/pull-based-deployments.md.

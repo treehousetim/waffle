@@ -17,9 +17,11 @@ use Phinx\Seed\AbstractSeed;
  *
  *     docker compose exec php vendor/bin/phinx seed:run -s UserSeeder
  *
- * Override the password with SEED_PASSWORD if you want your own. An account
- * that already exists is left alone, so a password you changed survives a
- * re-seed.
+ * Override the password with SEED_PASSWORD if you want your own. With
+ * FIRST_USERNAME and FIRST_USER_PASSWORD set (Doppler's dev config, passed in
+ * by name: README.md, "First run"), the owner is that account instead, with
+ * that password, which is never printed. An account that already exists is
+ * left alone, so a password you changed survives a re-seed.
  *
  * Refuses to run outside development. A seeder that can create a
  * known-password owner is the last thing that should ever execute against
@@ -49,6 +51,13 @@ final class UserSeeder extends AbstractSeed
         }
 
         $password = (string) ($_ENV['SEED_PASSWORD'] ?? getenv('SEED_PASSWORD') ?: self::DEFAULT_PASSWORD);
+        $ownerEmail = trim((string) ($_ENV['FIRST_USERNAME'] ?? getenv('FIRST_USERNAME') ?: ''));
+        $ownerPassword = (string) ($_ENV['FIRST_USER_PASSWORD'] ?? getenv('FIRST_USER_PASSWORD') ?: '');
+        $accounts = self::ACCOUNTS;
+
+        if ($ownerEmail !== '' && $ownerPassword !== '') {
+            $accounts[0] = ['email' => $ownerEmail, 'name' => 'Owner', 'role' => Role::Owner];
+        }
 
         $pdo = $this->getAdapter()->getConnection();
         // Throttling off: a seeder has no request to rate limit.
@@ -57,7 +66,7 @@ final class UserSeeder extends AbstractSeed
 
         echo "\n";
 
-        foreach (self::ACCOUNTS as ['email' => $email, 'name' => $name, 'role' => $role]) {
+        foreach ($accounts as ['email' => $email, 'name' => $name, 'role' => $role]) {
             $exists->execute([$email]);
 
             if ($exists->fetchColumn() !== false) {
@@ -69,12 +78,17 @@ final class UserSeeder extends AbstractSeed
             // Through Delight, so the hash is the library's own. A null
             // callback makes the account verified: there is nothing to confirm
             // against locally, and an unverified account cannot sign in.
-            $id = $auth->admin()->createUser($email, $password, $name);
+            $mine = $role === Role::Owner && $email === $ownerEmail;
+            $id = $auth->admin()->createUser($email, $mine ? $ownerPassword : $password, $name);
             $auth->admin()->addRoleForUserById($id, $role->mask());
 
             echo "  created  {$email} ({$role->value})\n";
         }
 
-        echo "\n  Password for any account created above: {$password}\n\n";
+        if ($ownerEmail !== '' && $ownerPassword !== '') {
+            echo "\n  {$ownerEmail}: the password in Doppler's FIRST_USER_PASSWORD\n";
+        }
+
+        echo "\n  Password for any other account created above: {$password}\n\n";
     }
 }

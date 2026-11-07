@@ -39,6 +39,7 @@ it('parses every shell script without a syntax error', function (string $script)
     expect(proc_close($process))->toBe(0, $stderr);
 })->with([
     'deploy/deploy.sh',
+    'deploy/pull.sh',
     'deploy/render-crontab.sh',
     'deploy/check-dns.sh',
     'tools/test.sh',
@@ -46,18 +47,17 @@ it('parses every shell script without a syntax error', function (string $script)
     'tools/backup-prod-db.sh',
     'tools/rename-project.sh',
     'tools/setup.sh',
-    'tools/setup-github.sh',
     'tools/release.sh',
     'tools/npm.sh',
     'tools/composer.sh',
 ]);
 
 it('renders the crontab with the header file and no heartbeat', function (): void {
-    [$code, $out] = runScript('deploy/render-crontab.sh', ['deploy/crontab', '/opt/app/.deploy/cron-header']);
+    [$code, $out] = runScript('deploy/render-crontab.sh', ['deploy/crontab', '/opt/app/shared/deploy/cron-header']);
 
     expect($code)->toBe(0)
-        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/health >/dev/null 2>&1 && ')
-        ->and($out)->toContain('curl -sf -H @/opt/app/.deploy/cron-header http://127.0.0.1:8081/cron/queue >/dev/null 2>&1' . "\n")
+        ->and($out)->toContain('curl -sf -H @/opt/app/shared/deploy/cron-header http://127.0.0.1:8081/cron/health >/dev/null 2>&1 && ')
+        ->and($out)->toContain('curl -sf -H @/opt/app/shared/deploy/cron-header http://127.0.0.1:8081/cron/queue >/dev/null 2>&1' . "\n")
         ->and($out)->not->toContain('__CRON_HEADER_FILE__')
         ->and($out)->not->toContain('__HEARTBEAT__');
 });
@@ -226,4 +226,94 @@ it('waits for the php container\'s own composer install by PID 1\'s name, not it
     expect($script)->toContain('cat /proc/1/comm')
         ->and($script)->toContain('= "php-fpm" ]')
         ->and($script)->not->toContain('/proc/1/cmdline');
+});
+
+/*
+ * deploy/deploy.sh brings a release that deploy/pull.sh has unpacked into
+ * service (docs/pull-based-deployments.md). It needs Docker and Doppler, so its
+ * order is asserted by shape: what must happen before `current` moves, and what
+ * happens when the release is not healthy after it has.
+ */
+
+function deployScript(): string
+{
+    return (string) file_get_contents(dirname(__DIR__, 2) . '/deploy/deploy.sh');
+}
+
+it('migrates from the new release before current moves, with the old one still serving', function (): void {
+    $script = deployScript();
+    $migrate = strpos($script, 'run --rm --no-deps -T php vendor/bin/phinx migrate -e production');
+    $switch = strpos($script, 'switch_to "$TAG"');
+
+    expect($migrate)->not->toBeFalse()
+        ->and($switch)->not->toBeFalse()
+        ->and($migrate < $switch)->toBeTrue();
+});
+
+it('checks the release is healthy after the switch, and switches back when it is not', function (): void {
+    $script = deployScript();
+
+    expect($script)->toContain('http://127.0.0.1:8081/cron/health')
+        ->and($script)->toContain('.data.migration')
+        ->and($script)->toContain('switch_to "$PREV"');
+});
+
+it('runs Compose from the release itself, never from a link that can move under it', function (): void {
+    expect(deployScript())->toContain('cd "$RELEASE_DIR"')
+        ->and(deployScript())->not->toContain('cd "$APP_ROOT/current"');
+});
+
+it('keeps the database outside every release, in a named volume', function (): void {
+    $prod = (string) file_get_contents(dirname(__DIR__, 2) . '/docker-compose.prod.yml');
+
+    expect($prod)->toMatch('/  db:\n(?:    .*\n)*?    volumes: !override\n      - db_data:\/var\/lib\/mysql\n/')
+        ->and($prod)->toMatch('/^volumes:\n(?:  .*\n)*  db_data:/m');
+});
+
+it('polls every minute as the deploy user, with the installed copy of pull.sh', function (): void {
+    $root = dirname(__DIR__, 2) . '/deploy/systemd/';
+    $service = (string) file_get_contents($root . 'waffle-deploy.service');
+    $timer = (string) file_get_contents($root . 'waffle-deploy.timer');
+
+    expect($service)->toContain("User=deploy\n")
+        ->and($service)->toContain('ExecStart=/usr/local/sbin/waffle-pull check')
+        // Empty in the template: each project fills in its own, and pull.sh
+        // refuses to run without them (docs/fresh-install.md).
+        ->and($service)->toContain("Environment=REPO=\n")
+        ->and($service)->toContain("Environment=DEPLOY_AUTHORS=\n")
+        ->and($timer)->toContain('OnUnitActiveSec=1min')
+        ->and($timer)->toContain('Unit=waffle-deploy.service');
+});
+
+it('mounts the release read-only into every container, and runs the worker as www-data', function (): void {
+    $prod = (string) file_get_contents(dirname(__DIR__, 2) . '/docker-compose.prod.yml');
+
+    foreach (['php', 'worker', 'caddy'] as $service) {
+        preg_match('/^  ' . $service . ':\n((?:    .*\n|\n)*)/m', $prod, $block);
+
+        expect($block[1] ?? '')->toContain("      - .:/var/www:ro\n");
+    }
+
+    preg_match('/^  worker:\n((?:    .*\n|\n)*)/m', $prod, $worker);
+
+    expect($worker[1] ?? '')->toContain("    user: www-data\n");
+});
+
+it('replaces only its own block of the shared crontab, so the site beside it keeps its jobs', function (): void {
+    $deploy = (string) file_get_contents(dirname(__DIR__, 2) . '/deploy/deploy.sh');
+
+    expect($deploy)->toContain('SLUG="${SLUG:-waffle}"')
+        ->and($deploy)->toContain('crontab -l 2>/dev/null | sed "/^# BEGIN ${SLUG}\\$/,/^# END ${SLUG}\\$/d"')
+        ->and($deploy)->toContain("printf '# BEGIN %s\\n%s\\n# END %s\\n' \"\$SLUG\" \"\$CRON_RENDERED\" \"\$SLUG\"")
+        ->and($deploy)->not->toContain("printf '%s\\n' \"\$CRON_RENDERED\" | crontab -");
+});
+
+it('refuses to start before the server\'s front Caddy exists, and says what to set up (docs/edge.md, 5)', function (): void {
+    $script = deployScript();
+    $check = strpos($script, 'docker network inspect edge');
+    $validate = strpos($script, 'caddy validate');
+
+    expect($check)->not->toBeFalse()
+        ->and($check < $validate)->toBeTrue()
+        ->and($script)->toContain('docs/edge.md');
 });

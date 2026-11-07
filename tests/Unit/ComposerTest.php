@@ -95,13 +95,13 @@ it('builds production vendor/ in CI with no plugins or scripts, then audits it (
     $workflow = (string) file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy.yml');
     $install = strpos($workflow, 'composer install --no-dev --no-plugins --no-scripts');
     $audit = strpos($workflow, 'composer audit --locked --no-dev');
-    // The command, not the comment near the top that mentions it.
-    $ship = strpos($workflow, 'rsync -az --delete');
+    // The command that packs the release, not a comment that mentions it.
+    $pack = strpos($workflow, 'tar --exclude=');
 
     expect($install)->not->toBeFalse()
         ->and($audit)->not->toBeFalse()
-        ->and($ship)->not->toBeFalse()
-        ->and($install < $audit && $audit < $ship)->toBeTrue();
+        ->and($pack)->not->toBeFalse()
+        ->and($install < $audit && $audit < $pack)->toBeTrue();
 });
 
 /**

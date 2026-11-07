@@ -34,7 +34,9 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/content.md](docs/content.md) | Publishing to a site, or adding a record type | The content slice as built: record types, publishing, revisions, slugs, posts, the site API, change notices, and the failure list. |
 | [docs/content-model.md](docs/content-model.md) | Designing what a site publishes | The decided design for all of it: publishable columns, slug history, terms, media, form submissions, sites; and the site API they serve. Partly built (docs/content.md). |
 | [docs/create-project.md](docs/create-project.md) | Starting a project from [Waffle](https://github.com/treehousetim/waffle) | What `composer create-project` asks, what the rename touches and leaves alone, and its failure list. |
-| [docs/https.md](docs/https.md) | Launching on your own hostname, or HTTPS is not coming up | How Caddy gets the certificate, the DNS check, the certificate store, and its failure list. |
+| [docs/https.md](docs/https.md) | Launching on your own hostname, or HTTPS is not coming up | How the certificate is got, the DNS check, the certificate store, and its failure list. |
+| [docs/edge.md](docs/edge.md) | Setting up the server, or adding a hostname to it | The server's front Caddy: ports 80 and 443 and every certificate for the app and the site, the `edge` network, the visitor's address, its failure list. |
+| [docs/accounts.md](docs/accounts.md) | Before putting it on a server, or when a key expires | Every outside account (GitHub, Doppler, DigitalOcean, the registrar, Resend, the optional monitors), the key to create in each, and where it goes. |
 | [docs/fresh-install.md](docs/fresh-install.md) | Putting it on a server for the first time | From nothing to production: Doppler configs, the droplet, the certificate, the GitHub environment, the first release. |
 | [docs/adding-a-feature.md](docs/adding-a-feature.md) | Starting each new feature | The test-first walkthrough: failure list, tests, then a slice (container, routes, overrides, test group). |
 | [docs/access-levels.md](docs/access-levels.md) | Adding a route, or changing who may do what | The three levels and the one table of what each may do (`Permissions::GRID`). |
@@ -43,7 +45,7 @@ What runs today: sign in, sign out, three access levels behind one permission gr
 | [docs/modules.md](docs/modules.md) | Adding a ready-made feature, or sharing one you built | [Waffle Iron](https://github.com/treehousetim/waffle/blob/main/docs/modules.md) modules: what one must contain, how an agent installs and updates it, how it is proven. They are listed in [Waffle Iron](https://github.com/treehousetim/waffle-iron); the first is [short links](https://github.com/treehousetim/waffle-short-links). |
 | [docs/supply-chain.md](docs/supply-chain.md) | Adding or updating a package | How npm and Composer are kept from hijacked releases: the week-long cooldown, no install scripts or unnamed plugins, containers, signature and vulnerability checks; and, designed but not built, the server's daily check for advisories against what it runs. |
 | [docs/releasing.md](docs/releasing.md) | Cutting a release | `./tools/release.sh`, how versions work for the framework and for an app, and its failure list. |
-| [docs/pull-based-deployments.md](docs/pull-based-deployments.md) | Weighing how releases reach the server | **Proposal:** the server pulls each release from GitHub itself (a timer, guards, migrate, atomic switch, health check, rollback), so CI never reaches the server. |
+| [docs/pull-based-deployments.md](docs/pull-based-deployments.md) | A deploy fails, or setting up the server | How a release reaches the server: the server polls GitHub every minute and pulls, checks and deploys a newer release itself (guards, migrate, atomic switch, health check, switching back), so nothing in CI can reach the server. Its failure list. |
 | [CHANGELOG.md](CHANGELOG.md) | Cutting a release, or catching up | What changed in each release, and what is waiting under `[Unreleased]`. |
 | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) | The brief is silent on something | Decisions not yet made. Answered ones move to [RESOLVED_QUESTIONS.md](RESOLVED_QUESTIONS.md). |
 
@@ -82,26 +84,15 @@ It is safe to run again: finished steps are skipped. For scripts and CI, every a
 
 When it is done, replace the placeholder paragraph in AGENTS.md §1 with what you are building.
 
-## Services to sign up for
+## Accounts you need
 
-| Service | What it is for | Cost |
-| --- | --- | --- |
-| [GitHub](https://github.com) | The repository, and GitHub Actions, which builds and deploys every release through a `prod` environment. | Free for public and private repos within the Actions allowance. |
-| [DigitalOcean](https://www.digitalocean.com) | The one droplet production runs on (Debian 13; 2 GB RAM is plenty to start). | From a few dollars a month. |
-| [Doppler](https://www.doppler.com) | The only source of production secrets: `prod-serve`, read by the server, and `prod-deploy`, read by GitHub Actions. Not needed locally. | Free Developer plan (3 users at last check; see [doppler.com/pricing](https://www.doppler.com/pricing)). |
-| A domain registrar | The production hostname. Any registrar works; its DNS can be hosted by the registrar or by DigitalOcean for free. | A domain a year. |
-
-Needed, but nothing to sign up for:
-
-- **Let's Encrypt** issues the certificate. Caddy asks for it, and renews it, on its own; there is no account to create and nothing to install.
-- **Docker** runs the stack locally. Docker Desktop is free for personal use and small businesses but needs a paid subscription in larger organisations; [OrbStack](https://orbstack.dev) or [Colima](https://github.com/abiosoft/colima) work too.
-
-Optional:
-
-- **A heartbeat monitor**, such as [healthchecks.io](https://healthchecks.io): its URL goes in `HEARTBEAT_URL`, and it alerts you when the five-minute health check stops arriving.
-- **Slack**: an incoming-webhook URL in `DEPLOY_ALERT_WEBHOOK`, posted to when a deploy fails.
-
-[docs/fresh-install.md](docs/fresh-install.md) walks through setting each one up.
+GitHub, Doppler, DigitalOcean and a domain; Resend once the app sends mail;
+healthchecks.io and Slack if you want them. [docs/accounts.md](docs/accounts.md)
+says what each is for, exactly which key to create in it, and where that key
+goes (always Doppler, through its website). Let's Encrypt needs no account:
+Caddy gets and renews the certificate itself. Locally you need only Docker
+(Docker Desktop, [OrbStack](https://orbstack.dev) or
+[Colima](https://github.com/abiosoft/colima)).
 
 ## Prerequisites
 
@@ -124,13 +115,17 @@ docker compose exec php vendor/bin/phinx migrate -e development
 #      owner@example.test   admin@example.test   user@example.test
 #    and sample content: a post and a page, published, and a draft post (docs/content.md).
 docker compose exec php vendor/bin/phinx seed:run -s UserSeeder -s ContentSeeder
+#    Or, with your own admin from Doppler's dev config (docs/accounts.md): the
+#    owner is FIRST_USERNAME, signing in with FIRST_USER_PASSWORD. -e passes
+#    each by name, so neither value is on a command line.
+doppler run -p waffle -c dev -- docker compose exec -e FIRST_USERNAME -e FIRST_USER_PASSWORD php vendor/bin/phinx seed:run -s UserSeeder -s ContentSeeder
 
 # 4. Build the frontend into src/public. npm runs in a container (docs/supply-chain.md):
 #    Node need not be installed, and no package can reach your home directory.
 ./tools/npm.sh ci && ./tools/npm.sh run build
 ```
 
-Open <http://localhost:8080> and sign in as `owner@example.test` with the password the seeder printed (`local-dev-password` unless you set `SEED_PASSWORD`).
+Open <http://localhost:8080> and sign in as `owner@example.test` with the password the seeder printed (`local-dev-password` unless you set `SEED_PASSWORD`), or as your own admin from Doppler's `dev`.
 
 The seeder refuses to run unless `APP_ENV` is `development`, `local` or `testing`: it creates an owner with a known password, which is the last thing that should ever reach production.
 

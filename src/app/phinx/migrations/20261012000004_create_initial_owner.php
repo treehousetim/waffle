@@ -12,8 +12,8 @@ use Phinx\Migration\AbstractMigration;
  *
  * WHY THIS IS A MIGRATION AND NOT A SEED
  *
- * `UserSeeder` refuses to run outside development, and the deploy rsync does
- * not ship `src/app/phinx/seeds/` at all — both deliberate, because that seeder
+ * `UserSeeder` refuses to run outside development, and the release tarball does
+ * not include `src/app/phinx/seeds/` at all — both deliberate, because that seeder
  * creates a verified owner whose password is printed in its own source. So on a
  * fresh production database there is no way in. Migrations are the only thing
  * that runs there automatically, which makes this the bootstrap hook.

@@ -123,6 +123,16 @@ for file in $FILES; do
     echo "  renamed in ${file#./}"
 done
 
+# Files whose names hold the slug: the server's systemd units, which
+# docs/fresh-install.md installs by name (failure list 21).
+if [ "$SLUG" != "waffle" ]; then
+    for file in deploy/systemd/waffle-*; do
+        [ -e "$file" ] || continue
+        mv "$file" "deploy/systemd/${SLUG}-${file#deploy/systemd/waffle-}"
+        echo "  renamed ${file} to deploy/systemd/${SLUG}-${file#deploy/systemd/waffle-}"
+    done
+fi
+
 # composer.json describes Waffle on Packagist; the project gets its own. The
 # name line still reads treehousetim/waffle, because the pass above keeps it.
 if [ -f composer.json ]; then
@@ -182,5 +192,5 @@ echo
 echo "Done. Next:"
 echo "  - refresh composer.lock, whose hash covers the project name:"
 echo "      composer update --lock   (or ./tools/setup.sh, which does it for you)"
-echo "  - create the Doppler project '${SLUG}' with configs prod-serve and prod-deploy (docs/fresh-install.md)"
+echo "  - create the Doppler project '${SLUG}' with the config prod (docs/fresh-install.md)"
 echo "  - read AGENTS.md, then fill in section 1 with what you are building"

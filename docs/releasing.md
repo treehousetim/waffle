@@ -45,7 +45,10 @@ a version there is semver.
 5. Commits `Release v<version>`, tags it, pushes `main` and the tag together
    (`--atomic`, so one never lands without the other), and publishes the
    GitHub release with that changelog section as its notes. For an app,
-   publishing the release is what deploys it.
+   publishing the release is what deploys it: GitHub Actions builds it and
+   attaches `<slug>-v<N>.tar.gz` and its `.sha256` to the release, and the
+   server, which checks every minute, pulls and deploys it
+   (docs/pull-based-deployments.md).
 
 **CI** (`.github/workflows/ci.yml`) runs the same gate on every push to
 `main` and every pull request, with no secret, no environment and a

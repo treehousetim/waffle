@@ -1,0 +1,31 @@
+# The server's half of a release (docs/pull-based-deployments.md): every
+# minute, waffle-deploy.timer runs this, which pulls the latest GitHub
+# release if it is newer than the one live and deploys it.
+#
+# A reference copy. Installed by hand, as root, and never by a release:
+#   install -m 644 deploy/systemd/waffle-deploy.service deploy/systemd/waffle-deploy.timer /etc/systemd/system/
+#   install -m 755 deploy/pull.sh /usr/local/sbin/waffle-pull
+#   systemctl daemon-reload && systemctl enable --now waffle-deploy.timer
+#
+# The settings below are not secret. The secrets come from Doppler, through
+# the deploy user's token scoped to /opt/waffle.
+
+[Unit]
+Description=Pull and deploy the latest waffle release
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+Environment=APP_ROOT=/opt/waffle
+Environment=SLUG=waffle
+# Fill both in before installing this (docs/fresh-install.md); the poller
+# refuses to run without them. REPO is the project's GitHub repository, like
+# acme/acme-app.
+Environment=REPO=
+# GitHub logins allowed to publish a release that deploys, separated by spaces.
+Environment=DEPLOY_AUTHORS=
+Environment=KEEP=5
+ExecStart=/usr/local/sbin/waffle-pull check

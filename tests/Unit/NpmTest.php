@@ -244,6 +244,35 @@ it('installs exactly the lockfile in CI, and checks its signatures before buildi
     $workflow = (string) file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy.yml');
 
     expect($workflow)->not->toMatch('/^\s+npm (?:install|i|update)\b/m')
-        // The step's commands, in this order and nothing between them.
-        ->and($workflow)->toMatch('/^( +)npm ci\n\1npm audit signatures\n\1npm run build$/m');
+        // The install's commands, in this order and nothing between them.
+        ->and($workflow)->toMatch('/^( +)npm ci\n\1npm audit signatures$/m')
+        ->and(strpos($workflow, 'npm audit signatures'))->toBeLessThan(strpos($workflow, 'npm run build'));
+});
+
+it('runs npm in CI only in containers that see the frontend and nothing else, and builds with no network', function (): void {
+    $workflow = (string) file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy.yml');
+    preg_match_all('/docker run --rm\b(.*?)node:26-alpine/s', $workflow, $runs);
+
+    expect($runs[1])->toHaveCount(2)
+        ->and($workflow)->not->toContain('actions/setup-node');
+
+    foreach ($runs[1] as $run) {
+        preg_match_all('/-v "([^"]+)"/', $run, $mounts);
+
+        // The frontend's source, the VERSION file (read-only), and the empty
+        // directory the build writes into: never the repository.
+        expect($mounts[1])->each->toMatch('#^(\$PWD/src/frontend:/app/src/frontend|\$PWD/VERSION:/app/VERSION:ro|\$RUNNER_TEMP/frontend:/app/src/public)$#')
+            ->and($run)->not->toContain('docker.sock');
+    }
+
+    expect($runs[1][1])->toContain('--network none');
+});
+
+it('takes only index.html and assets/ from the build, and ships none of the frontend\'s source', function (): void {
+    $workflow = (string) file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy.yml');
+
+    expect($workflow)->toContain('! -name index.html ! -name assets')
+        ->and($workflow)->toContain('! -type f ! -type d')
+        ->and($workflow)->toContain('--exclude=./src/frontend ')
+        ->and($workflow)->toContain('persist-credentials: false');
 });

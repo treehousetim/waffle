@@ -125,3 +125,7 @@ against a scratch copy of the files they edit.
     send people to a "<Name> Site" or "<Name> Iron" that does not exist. → The
     rename keeps `Waffle Site`, `Waffle Iron`, `waffle-site`, `waffle-iron`
     and `waffle-api.md` as they are.
+21. A file whose name holds the slug (the server's systemd units) keeps
+    Waffle's name, so the install commands in docs/fresh-install.md name files
+    that do not exist. → The rename renames `deploy/systemd/waffle-*` to
+    `<slug>-*`.

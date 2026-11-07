@@ -1,0 +1,13 @@
+# Runs waffle-deploy.service every minute (docs/pull-based-deployments.md).
+# A tick that finds a deploy still running skips itself (pull.sh's lock).
+
+[Unit]
+Description=Check for a new waffle release every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+Unit=waffle-deploy.service
+
+[Install]
+WantedBy=timers.target

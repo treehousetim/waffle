@@ -51,15 +51,15 @@ it('builds PHP with pcntl, so the worker hears SIGTERM (14)', function (): void 
         ->and(workerFile('src/cli/worker.php'))->toContain('[SIGTERM, SIGINT, SIGQUIT]');
 });
 
-it('stops the worker before migrations and starts it after php restarts (12)', function (): void {
+it('stops the worker before migrations and starts it from the new release after the switch (12)', function (): void {
     $deploy = workerFile('deploy/deploy.sh');
-    $stopped = strpos($deploy, 'up -d --remove-orphans --scale worker=0');
+    $stopped = strpos($deploy, 'stop worker');
     $migrated = strpos($deploy, 'vendor/bin/phinx migrate -e production');
-    $restarted = strpos($deploy, 'restart php');
-    $started = strpos($deploy, 'up -d --no-deps worker');
+    $switched = strpos($deploy, 'switch_to "$TAG"');
+    $started = strpos($deploy, 'up -d --remove-orphans', (int) $switched);
 
     expect($stopped)->toBeInt()
         ->and($migrated)->toBeGreaterThan($stopped)
-        ->and($restarted)->toBeGreaterThan($migrated)
-        ->and($started)->toBeGreaterThan($restarted);
+        ->and($switched)->toBeGreaterThan($migrated)
+        ->and($started)->toBeGreaterThan($switched);
 });

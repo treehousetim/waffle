@@ -3,7 +3,8 @@
 # Always used together with the base file, never on its own:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# deploy/deploy.sh invokes it exactly that way.
+# deploy/deploy.sh invokes it exactly that way, from the release it is
+# deploying (/opt/waffle/releases/vN), so `.` below is that release.
 
 # `!override` (Compose v2.24+) REPLACES the base list instead of appending to
 # it. Without it, Compose merges port lists and the server would also publish
@@ -18,13 +19,18 @@ services:
     #   doppler run -- docker compose -f docker-compose.yml -f docker-compose.prod.yml exec db mariadb -u root -p
     # !reset clears the base file's list instead of merging with it.
     ports: !reset []
+    # The data is a named volume, never a path in a release: every release is
+    # its own directory, so a path in one would be a new, empty database on
+    # every deploy. Never `docker compose down -v` here.
+    volumes: !override
+      - db_data:/var/lib/mysql
     restart: unless-stopped
 
   php:
     build:
       args:
         # opcache on, validate_timestamps=0, display_errors off.
-        # deploy.sh restarts this service after every deploy to clear opcache.
+        # deploy.sh recreates this service on every deploy, which clears opcache.
         PHP_INI: php.prod.ini
 
     # Pinned here rather than left to Doppler. The base file falls back to
@@ -42,11 +48,14 @@ services:
     #
     # The base file keeps vendor/ in a named volume (vendor_data). In
     # production that would be actively wrong: the runner builds vendor/ with
-    # --no-dev and rsyncs it here, and a named volume mounted over
+    # --no-dev into the release, and a named volume mounted over
     # /var/www/vendor would hide it behind whatever was installed first. The
     # bind mount is the whole point — the shipped vendor/ is the one that runs.
     volumes: !override
-      - .:/var/www
+      # Read-only: nothing running in the container may change the release,
+      # whose files the host runs too (the backup, a rollback). The app
+      # writes only to storage and PHP's own temporary directory.
+      - .:/var/www:ro
       - storage_data:/var/www/storage
 
     # No composer on the server. vendor/ arrives complete from the runner, so a
@@ -68,23 +77,27 @@ services:
       # (docs/content.md); its token is in Doppler. Empty: no site.
       SITE_REPOSITORY: ""
     volumes: !override
-      - .:/var/www
+      # Read-only: nothing running in the container may change the release,
+      # whose files the host runs too (the backup, a rollback). The app
+      # writes only to storage and PHP's own temporary directory.
+      - .:/var/www:ro
       - storage_data:/var/www/storage
+    # The image's default user is root; the worker needs nothing root can do.
+    user: www-data
     command: sh -c "exec php src/cli/worker.php"
     restart: unless-stopped
 
   caddy:
-    # The hostname Caddy serves and gets the certificate for. Written once, by
-    # tools/rename-project.sh; deploy.sh reads this line to check DNS before
-    # anything starts. A literal rather than a Doppler value, like APP_ENV
-    # above: nothing per environment to get wrong.
+    # The hostname Caddy serves. Written once, by tools/rename-project.sh;
+    # deploy.sh reads this line to check DNS before anything starts, and the
+    # server's front Caddy (deploy/edge/Caddyfile) names the same one. A
+    # literal rather than a Doppler value, like APP_ENV above: nothing per
+    # environment to get wrong.
     environment:
       SITE_ADDRESS: waffle.example.com
+    # No public port: the front Caddy owns 80 and 443 and reaches this one
+    # over the `edge` network (docs/edge.md).
     ports: !override
-      - "80:80"
-      - "443:443"
-      # HTTP/3.
-      - "443:443/udp"
       # Cron only (docker/caddy/Caddyfile). Loopback only: the crontab on this
       # server is the one caller, and binding 127.0.0.1 means nothing else --
       # IPv4 or IPv6 -- can reach it.
@@ -92,15 +105,20 @@ services:
     volumes: !override
       - .:/var/www:ro
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # The certificates and the ACME account. A named volume, never a path in
-      # the tree: the release is rsync'd with --delete, and a wiped store means
-      # a new certificate every deploy until Let's Encrypt's rate limit locks
-      # the hostname out for days. Never `docker compose down -v` here.
-      - caddy_data:/data
-      - caddy_config:/config
+    # On the front Caddy's network under the slug, which its Caddyfile names;
+    # and on this project's own, for php.
+    networks:
+      default:
+      edge:
+        aliases: [waffle]
     restart: unless-stopped
 
 volumes:
+  db_data:
   storage_data:
-  caddy_data:
-  caddy_config:
+
+# Made by the front Caddy (deploy/edge/docker-compose.yml), which is set up
+# before the first deploy.
+networks:
+  edge:
+    external: true

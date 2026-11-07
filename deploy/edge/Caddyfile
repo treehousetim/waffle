@@ -1,0 +1,27 @@
+# The server's front Caddy (docs/edge.md). One block per hostname the server
+# serves, forwarding to the project's own Caddy by the alias it has on the
+# `edge` network (its docker-compose.prod.yml). Caddy gets each hostname's
+# certificate on its own and redirects HTTP to HTTPS.
+#
+# The projects' Caddyfiles carry the security headers, caching and every
+# other rule; this only routes. It trusts no forwarded address: Caddy sends
+# each project the visitor's own in X-Forwarded-For, throwing away any the
+# visitor sent, and X-Forwarded-Proto: https.
+#
+# lb_try_duration: a deploy recreates a project's Caddy, and for those few
+# seconds a request waits for it rather than failing.
+#
+# Changing it, on the server, as root:
+#   cd /opt/edge && docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+#
+# Comments are whole lines only; tests/Unit/EdgeTest.php strips them.
+
+# The app (this repository). A site beside it on the same server (Waffle
+# Site's setups 2, 2a and 4) adds its own blocks: docs/edge.md, "A site
+# beside the app".
+waffle.example.com {
+	reverse_proxy waffle:80 {
+		lb_try_duration 15s
+	}
+}

@@ -1,0 +1,42 @@
+# The server's front Caddy (docs/edge.md): the one thing on the server that
+# listens on 80 and 443. It gets and renews the certificate for every
+# hostname the server serves, redirects HTTP to HTTPS, and forwards each
+# hostname over the `edge` Docker network to the project that serves it.
+#
+# Server config, like the poller: installed by hand into /opt/edge, never by a
+# release, and set up before any project's first deploy, because each
+# project's Caddy joins the network this file makes.
+#
+#   cd /opt/edge && docker compose up -d
+#
+# Comments are whole lines only; tests/Unit/EdgeTest.php strips them.
+
+name: edge
+
+services:
+  caddy:
+    # The same Caddy as the projects (EdgeTest checks it): bump them together.
+    image: caddy:2.11.9
+    ports:
+      - "80:80"
+      - "443:443"
+      # HTTP/3.
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The certificates and the ACME account. A named volume: a wiped store
+      # means a new certificate for every hostname, until Let's Encrypt's rate
+      # limit locks them out for days. Never `docker compose down -v` here.
+      - edge_data:/data
+      - edge_config:/config
+    networks:
+      - edge
+    restart: unless-stopped
+
+networks:
+  edge:
+    name: edge
+
+volumes:
+  edge_data:
+  edge_config:

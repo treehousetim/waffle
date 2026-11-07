@@ -9,6 +9,7 @@
 FROM php:8.5-fpm
 
 # git + unzip : composer needs them to fetch and extract packages
+# jq          : deploy/pull.sh reads GitHub's JSON with it; the suite runs it here
 # libzip-dev  : headers for ext-zip (pulls in the libzip runtime, which we keep)
 #
 # mbstring is compiled into the official php:8.5 images, so there is nothing to
@@ -19,6 +20,7 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         git \
         unzip \
+        jq \
         libzip-dev \
         libjpeg62-turbo-dev \
         libpng-dev \

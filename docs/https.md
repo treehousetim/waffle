@@ -1,17 +1,21 @@
 # HTTPS
 
 Caddy is the web server, locally and in production, from one file:
-`docker/caddy/Caddyfile`. In production it obtains the certificate for the
-site's hostname from Let's Encrypt on its own, renews it on its own, and
-redirects plain HTTP to HTTPS. There is no certbot, no renewal hook, and no
-certificate path to keep in step with anything.
+`docker/caddy/Caddyfile`, and it always serves plain HTTP. In production the
+server's front Caddy (docs/edge.md) sits in front of it: it obtains the
+certificate for the hostname from Let's Encrypt on its own, renews it on its
+own, redirects plain HTTP to HTTPS, and forwards the hostname to this Caddy.
+There is no certbot, no renewal hook, and no certificate path to keep in step
+with anything.
 
 ## Where the hostname lives
 
-Once: `SITE_ADDRESS` in `docker-compose.prod.yml`, a literal that
-`tools/rename-project.sh` writes. The Caddyfile reads it as `{$SITE_ADDRESS}`.
-Locally the base compose file sets it to `:80`, a port with no hostname, which
-Caddy serves over plain HTTP and never tries to get a certificate for.
+`SITE_ADDRESS` in `docker-compose.prod.yml`, a literal that
+`tools/rename-project.sh` writes. The Caddyfile reads it as
+`http://{$SITE_ADDRESS}`: that hostname, over plain HTTP. Locally the base
+compose file sets it to `:80`, any hostname. The front Caddy's
+`deploy/edge/Caddyfile` names it too, and `tests/Unit/EdgeTest.php` checks the
+two agree.
 
 It is not a Doppler value on purpose: `deploy.sh` reads it to check DNS before
 anything starts, and a literal in the repo is one less thing to get wrong
@@ -23,9 +27,10 @@ per environment.
    address (or its reserved IP). **No AAAA record** unless the droplet has IPv6
    turned on: Let's Encrypt tries IPv6 first, and a record pointing nowhere
    fails the certificate.
-2. **Open the firewall.** 80 and 443 from anywhere (443/udp too, for HTTP/3).
-   Port 80 has to stay open after launch: Let's Encrypt validates over it, and
-   Caddy redirects everything else on it to HTTPS.
+2. **Open the firewall** and set up the front Caddy (docs/edge.md). 80 and
+   443 from anywhere (443/udp too, for HTTP/3). Port 80 has to stay open after
+   launch: Let's Encrypt validates over it, and the front Caddy redirects
+   everything else on it to HTTPS.
 3. **Release.** `deploy.sh` checks DNS first (`deploy/check-dns.sh`), against a
    public resolver so it sees what Let's Encrypt sees, and stops with what to
    fix if the name does not point here. On the first deploy that is a refusal;
@@ -37,12 +42,10 @@ per environment.
 
 ## The certificate store
 
-Caddy keeps its certificates and ACME account in the `caddy_data` named
-volume, mounted at `/data`. A named volume, not a directory in the tree,
-because the release is rsync'd with `--delete`, and a store that is wiped gets
-a new certificate on every deploy until Let's Encrypt's rate limit (five
-duplicate certificates a week) locks the hostname out for days. Never
-`docker compose down -v` in production.
+The front Caddy keeps the certificates and its ACME account in the `edge_data`
+named volume (docs/edge.md). A store that is lost gets a new certificate for
+every hostname until Let's Encrypt's rate limit (five duplicate certificates a
+week) locks them out for days. Never `docker compose down -v` in `/opt/edge`.
 
 ## The rules the Caddyfile keeps
 
@@ -66,7 +69,8 @@ Carried over from the nginx configs it replaced (Caddy took over on 2026-10-12),
 ## Failure list
 
 1–6 are tested in `tests/Unit/DeployScriptsTest.php` (the DNS check, with stand-in `dig`,
-`hostname` and `curl`), and 7 and 10–16 in `tests/Unit/CaddyfileTest.php`. 8 and 9
+`hostname` and `curl`), 7 in `tests/Unit/EdgeTest.php`, and 10–16 in
+`tests/Unit/CaddyfileTest.php`. The front Caddy's own list is in docs/edge.md. 8 and 9
 are steps in `deploy/deploy.sh`, which only runs on a server; the suite checks
 that it parses, and both were exercised by hand against a real Caddy.
 
@@ -80,13 +84,14 @@ that it parses, and both were exercised by hand against a real Caddy.
 5. The DNS check reads `/etc/hosts` or a stale local cache instead of what
    Let's Encrypt will see.
 6. `dig` is missing and the check passes because it found nothing to compare.
-7. The certificate store is wiped by a deploy, and repeated re-issues hit Let's
-   Encrypt's rate limit.
+7. The certificate store is wiped, and repeated re-issues hit Let's Encrypt's
+   rate limit.
 8. The Caddyfile has an error, and the deploy takes the site down with it
    instead of stopping first.
 9. The deploy reports success while HTTPS is not actually serving a valid
    certificate.
-10. Local development tries to get a certificate, or redirects to HTTPS.
+10. This Caddy tries to get a certificate, or redirects to HTTPS, locally or
+    in production.
 11. The hostname is written in more than one place and the copies drift.
 12. A response, an error response included, goes out without the security
     headers, or with them overwritten by PHP.

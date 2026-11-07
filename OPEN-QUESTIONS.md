@@ -16,7 +16,7 @@ Sparse list. One line each where possible. When answered, move it to `RESOLVED_Q
 - **Media's object-storage client.** Media is built (docs/content.md, "Media") on `LocalDiskStorage`, the `storage_data` volume, as member photos are; the content model wants S3-compatible object storage (RESOLVED_QUESTIONS.md), which is one more `StoragePort` adapter and needs a library. AGENTS.md §2's rule picks the candidate with the most installs: `aws/aws-sdk-php` (large, but the reference client, and works with DigitalOcean Spaces); the lighter alternative is `async-aws/s3`. Until one is approved, back up the volume (below).
 
 ## Needs a decision before production
-- **Where the server's advisory check reports** (docs/supply-chain.md, "Watching for advisories, on the server"): an alert webhook in `prod-serve`, the heartbeat service's failure ping, or both.
+- **Where the server's advisory check reports** (docs/supply-chain.md, "Watching for advisories, on the server"): the deploy's `DEPLOY_ALERT_WEBHOOK` in `prod`, the heartbeat service's failure ping, or both.
 - **Backing up stored files.** The `storage_data` volume (docs/storage.md: uploads, photos) is in no backup. Proposed: the nightly backup also archives the volume beside the database dump, and both go off-site together (below); or files move to object storage, which keeps its own copies.
 - **Off-site backups.** `tools/backup-prod-db.sh` keeps 14 nightly dumps on the server itself, which does not survive losing the server. Where should copies go (object storage in another region, with a key limited to one bucket)?
 - **Monitoring.** `HEARTBEAT_URL` (a dead-man's switch pinged after each `/cron/health`) is optional. Pick a service, or decide not to.

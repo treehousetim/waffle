@@ -39,4 +39,4 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # The nightly database dump (tools/backup-prod-db.sh keeps the newest 14). Its
 # output is kept, because "did last night's backup work" has to be answerable.
-15 3 * * * cd /opt/waffle && doppler run -- ./tools/backup-prod-db.sh >>/opt/waffle/.deploy/backup.log 2>&1
+15 3 * * * cd /opt/waffle/current && doppler run -- ./tools/backup-prod-db.sh /opt/waffle/shared/backups >>/opt/waffle/shared/deploy/backup.log 2>&1

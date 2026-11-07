@@ -62,7 +62,7 @@ it('deploys only an app\'s release tags, and never from the framework\'s own rep
         ->and(explode("\n", $workflow))->toContain("    if: github.repository != 'treehousetim/waffle'");
 });
 
-it('runs npm and composer only in a job with no environment, and secrets only in jobs that run neither', function (): void {
+it('runs npm and composer in a job that cannot write, and writes to the release only from a job that runs neither', function (): void {
     $workflow = projectFile('.github/workflows/deploy.yml');
     $body = substr($workflow, (int) strpos($workflow, "\njobs:\n") + 7);
     preg_match_all('/^  ([a-z][a-z-]*):\n/m', $body, $names, PREG_OFFSET_CAPTURE);
@@ -75,16 +75,28 @@ it('runs npm and composer only in a job with no environment, and secrets only in
         $jobs[$name] = implode("\n", array_filter(explode("\n", $text), static fn (string $line): bool => preg_match('/^\s*#/', $line) !== 1));
     }
 
-    expect(array_keys($jobs))->toBe(['build', 'ship', 'alert']);
+    expect(array_keys($jobs))->toBe(['build', 'attach'])
+        ->and($workflow)->toContain("permissions:\n  contents: read\n")
+        ->and($workflow)->not->toMatch('/secrets\.|environment:/');
 
     foreach ($jobs as $name => $job) {
         $installs = preg_match('/\b(npm (ci|run|install|audit)|composer (install|audit))\b/', $job) === 1;
-        $secrets = preg_match('/secrets\.|environment:/', $job) === 1;
+        $writes = str_contains($job, 'contents: write');
 
-        expect($installs && $secrets)->toBeFalse("job {$name} runs a package manager and can read a secret");
+        expect($installs && $writes)->toBeFalse("job {$name} runs a package manager and can write to the repository");
     }
 
-    expect($jobs['ship'])->toContain('actions/download-artifact@')
-        ->and($jobs['build'])->toContain('actions/upload-artifact@')
-        ->and($jobs['alert'])->toContain("needs: [build, ship]\n    if: failure()");
+    expect($jobs['build'])->toContain('actions/upload-artifact@')
+        ->and($jobs['attach'])->toContain('actions/download-artifact@')
+        ->and($jobs['attach'])->toContain('contents: write')
+        ->and($jobs['attach'])->toContain('gh release upload "$TAG" "waffle-${TAG}.tar.gz" "waffle-${TAG}.tar.gz.sha256"');
+});
+
+it('makes every shell script executable, so the server and the docs can run it by name', function (): void {
+    $root = dirname(__DIR__, 2);
+    $scripts = array_merge(glob($root . '/deploy/*.sh') ?: [], glob($root . '/tools/*.sh') ?: []);
+    $notExecutable = array_values(array_filter($scripts, static fn (string $script): bool => !is_executable($script)));
+
+    expect($scripts)->not->toBe([])
+        ->and(array_map(static fn (string $script): string => substr($script, strlen($root) + 1), $notExecutable))->toBe([]);
 });

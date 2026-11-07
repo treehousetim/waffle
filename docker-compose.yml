@@ -8,7 +8,7 @@
 # Every value below has a local default after `:-`, and none is secret, so a
 # fresh clone comes up with no setup -- and the DB defaults are exactly what
 # .env.testing assumes. In production, deploy.sh runs Compose under
-# `doppler run --` with the server's prod-serve config, which supplies the
+# `doppler run --` with the server's prod config, which supplies the
 # real values for the ${...} interpolation.
 #
 # THE ENVIRONMENT BLOCK OF THE php SERVICE IS THE AUTHORITATIVE LIST OF CONFIG
@@ -138,8 +138,8 @@ services:
 
   caddy:
     # The web server (docker/caddy/Caddyfile, docs/https.md). The same file
-    # serves production, where SITE_ADDRESS is the hostname and Caddy handles
-    # the certificate; here ":80" means plain HTTP and no certificate.
+    # serves production, where SITE_ADDRESS is the hostname and the server's
+    # front Caddy handles the certificate; here ":80" means any hostname.
     image: caddy:2.11.9
     environment:
       SITE_ADDRESS: ":80"
@@ -150,13 +150,9 @@ services:
     volumes:
       - .:/var/www:ro
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
     depends_on:
       - php
 
 volumes:
   vendor_data:
   storage_data:
-  caddy_data:
-  caddy_config:

@@ -178,7 +178,7 @@ docs/data-pages.md). Two settings:
 | Variable | Where | What |
 | --- | --- | --- |
 | `SITE_REPOSITORY` | `docker-compose.prod.yml`, as a literal | the site's repository, `owner/name` (not a secret) |
-| `SITE_DISPATCH_TOKEN` | Doppler, `prod-serve` | a fine-grained token with the Contents permission (read and write) on that repository only |
+| `SITE_DISPATCH_TOKEN` | Doppler, `prod` | a fine-grained token with the Contents permission (read and write) on that repository only |
 
 Without both, a notice is not sent: silently outside production, and as a
 failed job in production, so the Queue page shows it.

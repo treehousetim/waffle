@@ -88,8 +88,8 @@ A job already running is never merged into: the new one waits behind it.
   or SIGQUIT, the php:fpm image's own) lets the job in hand finish, gives
   back the claimed jobs it had not started, and exits. A lost database
   connection exits non-zero after five seconds, and Compose restarts it.
-- **Deploys** scale the worker to zero before migrations and start it after
-  php restarts (`deploy/deploy.sh`).
+- **Deploys** stop the worker before migrations and start it again from the
+  new release after the switch (`deploy/deploy.sh`).
 
 ### The policy
 

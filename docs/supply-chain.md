@@ -31,8 +31,12 @@ to reach.
    with your machine's. Node does not need to be installed on your machine at
    all.
 4. **The lockfile is the install.** CI runs `npm ci`, which installs exactly
-   the locked versions and checks each against its recorded hash, and loads
-   no secret until npm and composer have finished.
+   the locked versions and checks each against its recorded hash. In CI too
+   npm runs only in containers that see `src/frontend` and nothing else, and
+   the build, where packages' code runs, has no network; only `index.html`
+   and `assets/` come out of it into the release, so a package that got
+   through cannot change the code the server runs. No job that runs npm can
+   write to the repository, and none holds a secret.
 5. **Tampering is checked.** CI runs `npm audit signatures` after `npm ci`:
    it fails on a tarball whose registry signature does not match. (It cannot
    catch a hijacked account publishing normally; that is what layer 1 is for.)
@@ -176,13 +180,13 @@ audits it, on the runner, on every release.
 
 ### How it reports
 
-- **Once per finding.** What has been reported is kept in `.deploy/advisories`,
+- **Once per finding.** What has been reported is kept in `shared/deploy/advisories`,
   so the same advisory is not reported every day, and a finding that goes
   away (the version was bumped) is forgotten.
 - **To where a person looks.** The same rule as every cron job
   (deploy/crontab): output is discarded, so the outcome has to go somewhere.
   The channel is an open question (OPEN-QUESTIONS.md): an alert webhook in
-  `prod-serve`, the heartbeat service's failure ping, or both.
+  `prod`, the heartbeat service's failure ping, or both.
 - **A check that cannot run is itself reported**, after two days in a row, so
   a broken check does not look like a quiet one.
 
@@ -194,7 +198,7 @@ audits it, on the runner, on every release.
    treated as (1), never as "no advisories".
 3. A container is not running, so its version cannot be read: reported as
    such, not skipped silently.
-4. The same advisory every day: reported once (`.deploy/advisories`).
+4. The same advisory every day: reported once (`shared/deploy/advisories`).
 5. A version string the check cannot parse: reported, not compared.
 6. A rate limit from the GitHub API (60 requests an hour without a token):
    one request per component per day stays far below it; a 403 is (1).
@@ -208,7 +212,7 @@ audits it, on the runner, on every release.
 ### To build
 
 - `deploy/check-advisories.sh`, run daily from `deploy/crontab` (outside the
-  busy hours, after the nightly backup), with its state in `.deploy/`
+  busy hours, after the nightly backup), with its state in `shared/deploy/`
 - the reporting channel, once chosen, rendered into the crontab the way
   `HEARTBEAT_URL` is
 - `unattended-upgrades` in docs/fresh-install.md

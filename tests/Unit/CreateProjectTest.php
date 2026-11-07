@@ -39,6 +39,8 @@ function renameFixture(): string
         'tests/Support/ModuleFixtures.php',
         'tests/Pest.php',
         'tests/Unit/CreateProjectTest.php',
+        'deploy/systemd/waffle-deploy.service',
+        'deploy/systemd/waffle-deploy.timer',
     ] as $path) {
         is_dir(dirname($dir . '/' . $path)) || mkdir(dirname($dir . '/' . $path), 0o777, true);
         copy($root . '/' . $path, $dir . '/' . $path);
@@ -130,6 +132,18 @@ it('leaves no placeholder outside the lines that point at Waffle itself (1)', fu
         ->toContain("'Hello from Acme Ops.'")
         ->toContain("'acme_test'")
         ->toContain("'ops.acme.com'");
+});
+
+it('renames the files whose names hold the slug, so the install commands name files that exist (21)', function (): void {
+    [$code, , $err] = runRename($this->dir, ['acme', 'Acme Ops', 'ops.acme.com']);
+
+    expect($code)->toBe(0, $err)
+        ->and(is_file($this->dir . '/deploy/systemd/acme-deploy.service'))->toBeTrue()
+        ->and(is_file($this->dir . '/deploy/systemd/acme-deploy.timer'))->toBeTrue()
+        ->and(is_file($this->dir . '/deploy/systemd/waffle-deploy.service'))->toBeFalse()
+        ->and(is_file($this->dir . '/deploy/systemd/waffle-deploy.timer'))->toBeFalse()
+        ->and((string) file_get_contents($this->dir . '/deploy/systemd/acme-deploy.service'))->toContain('ExecStart=/usr/local/sbin/acme-pull check')
+        ->and((string) file_get_contents($this->dir . '/deploy/systemd/acme-deploy.timer'))->toContain('Unit=acme-deploy.service');
 });
 
 it('gives the project its own package name and description (2)', function (): void {
