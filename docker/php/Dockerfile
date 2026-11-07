@@ -6,7 +6,9 @@
 #
 # Build:  docker compose build
 #   prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-FROM php:8.5-fpm
+# An exact patch, not php:8.5-fpm: 8.5.12 is the floor (tests/Unit/PhpVersionTest.php),
+# and a floating tag builds from whatever older image a machine has cached.
+FROM php:8.5.12-fpm
 
 # git + unzip : composer needs them to fetch and extract packages
 # jq          : deploy/pull.sh reads GitHub's JSON with it; the suite runs it here
@@ -31,6 +33,7 @@ RUN set -eux; \
     php -m | grep -qi '^gd$'; \
     php -m | grep -qi '^pcntl$'; \
     php -m | grep -qi '^mbstring$'; \
+    php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);'; \
     rm -rf /var/lib/apt/lists/*
 
 # Composer 2, copied from the official image (no installer script to verify).

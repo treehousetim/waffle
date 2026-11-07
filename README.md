@@ -17,7 +17,7 @@ It is for people with some engineering skill who want their own custom website: 
 
 **Status: early preview.** v0.1.0 was released so Packagist can list the package; the full test suite has not yet been run end to end.
 
-A starting point for a web application on a fixed stack — PHP 8.5 + Slim 4 behind Caddy (automatic HTTPS), MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server deployed by GitHub Actions — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
+A starting point for a web application on a fixed stack — PHP 8.5.12+ and Slim 4 behind Caddy (automatic HTTPS), MariaDB 12.3, Vue 3 + Vite, Docker Compose, Doppler for secrets, one server that pulls each release from GitHub — with a test-first method built in: 100% coverage as a ratchet, per-test database rollback, architecture rules enforced by the build, test groups per feature slice, and end-to-end tests that leave a repeatable artifact.
 
 What runs today: sign in, sign out, three access levels behind one permission grid, a hello page, and a Settings page as the worked example of a feature slice.
 

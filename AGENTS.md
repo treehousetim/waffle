@@ -51,7 +51,7 @@ Use exactly these majors, latest patch at install time.
 
 | Layer | Choice | Version |
 |---|---|---|
-| Language | PHP | 8.5 (`php:8.5-fpm` image) |
+| Language | PHP | 8.5.12 or later (`php:8.5.12-fpm` image, an exact patch; composer requires `^8.5.12`) — raised from 8.5 on 2026-11-07. A newer patch means bumping the Dockerfile, composer.json and `PHP_FLOOR` in `tests/Unit/PhpVersionTest.php` together |
 | HTTP framework | Slim | `slim/slim` ^4.15, `slim/psr7` ^1.8 |
 | DI | PHP-DI | `php-di/php-di` ^7.1, `php-di/slim-bridge` ^3.4 |
 | Auth | Delight\Auth | `delight-im/auth` ^9.0 — session-based, roles via its bitmask |
@@ -114,7 +114,7 @@ src/
     src/{api,assets,components,router,stores,utils,views}/
     test/                 # node:test suite for pure modules (src/utils/)
 docker/
-  php/Dockerfile          # php:8.5-fpm + pdo_mysql zip, composer copied from composer:2, ARG PHP_INI selects php.ini vs php.prod.ini
+  php/Dockerfile          # php:8.5.12-fpm + pdo_mysql zip, composer copied from composer:2, ARG PHP_INI selects php.ini vs php.prod.ini
   caddy/Caddyfile         # the web server, local and production, always plain HTTP (the front Caddy has HTTPS in production); /cron on loopback-only 8081
 deploy/
   pull.sh                 # the server's poller (installed as /usr/local/sbin/<slug>-pull): pulls a newer release from GitHub, checks it, hands it to its deploy.sh
